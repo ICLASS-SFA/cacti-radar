@@ -1,27 +1,32 @@
 import numpy as np
-import os, glob, sys
+import sys
+import yaml
 import time, datetime, calendar
 import pytz
 import xarray as xr
 
 if __name__ == '__main__':
 
-    startdate = '20181015.0000'
-    enddate = '20190303.0000'
+    # Get configuration file name from input
+    config_file = sys.argv[1]
+    # Read configuration from yaml file
+    stream = open(config_file, 'r')
+    config = yaml.full_load(stream)
+
+    startdate = config['startdate']
+    enddate = config['enddate']
+    stats_path = config['stats_path']
+    sonde_path = config['sonde_path']
 
     # Maximum time difference allowed to match the datasets
     time_window = 10  # [second]
     print(f'Max time window allowed to match the datasets: {time_window} s')
-
-    # Input/output file locations
-    stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/stats/'
-    sonde_path = os.path.expandvars('$ICLASS') + f'/cacti/sounding_stats/'
-    output_path = stats_path
-
+  
     # Input file basenames
     stats_filebase = 'stats_tracknumbersv1.0_'
 
     # Output statistics filename
+    output_path = stats_path
     output_filename = f'{output_path}interpsonde_celltrack_{startdate}_{enddate}.nc'
 
     # Track statistics file dimension names

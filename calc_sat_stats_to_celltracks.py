@@ -3,9 +3,10 @@ Calculates cloud statistics from satellite data for tracked convective cells.
 The cloud statistics are written to netCDF file matching the cell track statistics file format.
 """
 import numpy as np
-import os, glob
+import os, sys, glob
 import time, datetime, calendar
-from pytz import timezone, utc
+from pytz import utc
+import yaml
 import xarray as xr
 import dask
 from dask.distributed import Client, LocalCluster
@@ -55,30 +56,22 @@ if __name__ == '__main__':
     # print('Loading track stats file')
     print((time.ctime()))
 
-    run_parallel = 1
-    # Number of workers for Dask
-    n_workers = 35
-    # Threads per worker
-    threads_per_worker = 1
+    # Get configuration file name from input
+    config_file = sys.argv[1]
+    # Read configuration from yaml file
+    stream = open(config_file, 'r')
+    config = yaml.full_load(stream)
 
-    # startdate = '20181110.1800'
-    # enddate = '20181112.2359'
-    # startdate = '20181101.0000'
-    # enddate = '20181130.2359'
-    startdate = '20181015.0000'
-    enddate = '20190303.0000'
+    run_parallel = config['run_parallel']
+    n_workers = config['n_workers']
+    threads_per_worker = config['threads_per_worker']
+    startdate = config['startdate']
+    enddate = config['enddate']
+    time_window = config['time_window']
+    stats_path = config['stats_path']
+    pixelfile_path = config['pixelfile_path']
+    satfile_path = config['satfile_path']
 
-    # Maximum time difference allowed to match the datasets
-    time_window = 300  # [second]
-
-    # Input/output file locations
-    # stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/stats/'
-    # pixelfile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/{startdate}_{enddate}/'
-    stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/stats/'
-    pixelfile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/celltracking/{startdate}_{enddate}/'
-    # stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_mpgridded_celltracking.c1/stats/'
-    # pixelfile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_mpgridded_celltracking.c1/celltracking/{startdate}_{enddate}/'
-    satfile_path = os.path.expandvars('$ICLASS') + f'/cacti/corvisstpx2drectg16v4minnisX1.parallaxcorrected_regrid2csapr2gridded.c1/'
     output_path = stats_path
 
     # Input file basenames
@@ -284,31 +277,22 @@ if __name__ == '__main__':
     dsout.basetime.attrs['long_name'] = 'Epoch time of each cell in a track'
     dsout.basetime.attrs['standard_name'] = 'time'
     dsout.basetime.attrs['units'] = basetime_units
-
     dsout.cell_area.attrs['long_name'] = 'Area of the convective cell in a track'
     dsout.cell_area.attrs['units'] = 'km^2'
-
     dsout.cloud_top_temperature_min.attrs['long_name'] = 'Minimum cloud top temperature in a track'
     dsout.cloud_top_temperature_min.attrs['units'] = 'K'
-
     dsout.temperature_ir_min.attrs['long_name'] = 'Minimum IR temperature in a track'
     dsout.temperature_ir_min.attrs['units'] = 'K'
-
     dsout.cloud_top_height_max.attrs['long_name'] = 'Maximum cloud top height in a track'
     dsout.cloud_top_height_max.attrs['units'] = 'km'
-
     dsout.cloud_top_pressure_min.attrs['long_name'] = 'Minimum cloud top pressure in a track'
     dsout.cloud_top_pressure_min.attrs['units'] = 'hPa'
-
     dsout.area_liquid.attrs['long_name'] = 'Area of liquid cloud-top in a track'
     dsout.area_liquid.attrs['units'] = 'km^2'
-
     dsout.area_ice.attrs['long_name'] = 'Area of ice cloud-top in a track'
     dsout.area_ice.attrs['units'] = 'km^2'
-
     dsout.lwp_max.attrs['long_name'] = 'Maximum liquid water path in a track'
     dsout.lwp_max.attrs['units'] = 'g/m^2'
-
     dsout.iwp_max.attrs['long_name'] = 'Maximum ice water path in a track'
     dsout.iwp_max.attrs['units'] = 'g/m^2'
 
@@ -333,7 +317,3 @@ if __name__ == '__main__':
     # Write netcdf file
     dsout.to_netcdf(path=output_filename, mode='w', format='NETCDF4_CLASSIC', unlimited_dims=trackdimname, encoding=encodelist)
     print(f'Output saved: {output_filename}')
-
-    # diff = cell_area_2 - cell_area
-    # print(np.nanmax(diff), np.nanmin(diff))
-    # import pdb; pdb.set_trace()
