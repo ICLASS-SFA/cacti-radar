@@ -1,26 +1,31 @@
 import numpy as np
-import os, glob, sys
+import sys
+import yaml
 import time
 import xarray as xr
 
 if __name__ == '__main__':
 
-    startdate = '20181015.0000'
-    enddate = '20190303.0000'
+    # Get configuration file name from input
+    config_file = sys.argv[1]
+    # Read configuration from yaml file
+    stream = open(config_file, 'r')
+    config = yaml.full_load(stream)
+
+    startdate = config['startdate']
+    enddate = config['enddate']
+    stats_path = config['stats_path']
+    sonde_file = config['sonde_file']
 
     # Maximum time difference allowed to match the datasets
     time_window = 30  # [second]
     print(f'Max time window allowed to match the datasets: {time_window} s')
 
-    # Input/output file locations
-    stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/stats/'
-    sonde_path = os.path.expandvars('$ICLASS') + f'/cacti/sounding_stats/'
-    output_path = stats_path
-
     # Input file basenames
     stats_filebase = 'stats_tracknumbersv1.0_'
 
     # Output statistics filename
+    output_path = stats_path
     output_filename = f'{output_path}interpsonde_parameters_celltrack_{startdate}_{enddate}.nc'
 
     # Track statistics file dimension names
@@ -30,9 +35,6 @@ if __name__ == '__main__':
 
     # Track statistics file
     trackstats_file = f'{stats_path}{stats_filebase}{startdate}_{enddate}.nc'
-    sonde_file = f'{sonde_path}Interpsonde_parameters_CACTI_AMF_2Oct-30Apr.nc'
-    # uvq_file = f'{sonde_path}CACTI_M1_interpsonde_wind_humidity_indices.nc'
-
 
     # Read track statistics file
     print(trackstats_file)

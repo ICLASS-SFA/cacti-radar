@@ -3,12 +3,10 @@ Calculates 3D radar cell statistics from gridded PPI data for tracked convective
 The 3D cell statistics are written to netCDF file matching the cell track statistics file format.
 """
 import numpy as np
-import os
-import glob
-import time
-import datetime
-import calendar
-from pytz import timezone, utc
+import os, sys, glob
+import time, datetime, calendar
+from pytz import utc
+import yaml
 import xarray as xr
 import dask
 from dask.distributed import Client, LocalCluster
@@ -58,33 +56,23 @@ if __name__ == '__main__':
     # print('Loading track stats file')
     print((time.ctime()))
 
-    run_parallel = 1
-    # Number of workers for Dask
-    n_workers = 30
-    # Threads per worker
-    threads_per_worker = 1
+    # Get configuration file name from input
+    config_file = sys.argv[1]
+    # Read configuration from yaml file
+    stream = open(config_file, 'r')
+    config = yaml.full_load(stream)
 
-    # startdate = '20181110.1800'
-    # enddate = '20181112.2359'
-    # startdate = '20181101.0000'
-    # enddate = '20181130.2359'
-    startdate = '20181015.0000'
-    enddate = '20190303.0000'
+    run_parallel = config['run_parallel']
+    n_workers = config['n_workers']
+    threads_per_worker = config['threads_per_worker']
+    startdate = config['startdate']
+    enddate = config['enddate']
+    time_window = config['time_window']
+    stats_path = config['stats_path']
+    pixelfile_path = config['pixelfile_path']
+    ppifile_path = config['ppifile_path']
 
-    # Maximum time difference allowed to match the datasets
-    time_window = 60  # [second]
-
-    # Input/output file locations
-    stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/stats/'
-    pixelfile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/celltracking/{startdate}_{enddate}/'
-    # stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/stats/'
-    # pixelfile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_celltracking.c1/celltracking/{startdate}_{enddate}/'
-    ppifile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_gridded.c1/'
-    # stats_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_mpgridded_celltracking.c1/stats/'
-    # pixelfile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_mpgridded_celltracking.c1/celltracking/{startdate}_{enddate}/'
-    # ppifile_path = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/taranis_corcsapr2cfrppiqcM1_mpgridded.c1/'
     output_path = stats_path
-    # output_path = '/home/zhe1feng1/'
 
     # Input file basenames
     stats_filebase = 'stats_tracknumbersv1.0_'
@@ -124,8 +112,6 @@ if __name__ == '__main__':
             match_ppibasetime[ifile] = ppi_basetime[idx]
         else:
             print(f'No match file found for: {pixelfilelist[ifile]}')
-
-    # import pdb; pdb.set_trace()
 
 
     # Read track statistics file
@@ -261,8 +247,6 @@ if __name__ == '__main__':
                 max_lwc[matchindicestmp[0,imatch], matchindicestmp[1,imatch], :] = vars[14][imatch, :]
                 volrain[matchindicestmp[0,imatch], matchindicestmp[1,imatch], :] = vars[15][imatch, :]
 
-    # diff = cell_area_2 - cell_area
-    # import pdb; pdb.set_trace()
 
     ##################################
     # Write to netcdf
@@ -309,13 +293,10 @@ if __name__ == '__main__':
     dsout['basetime'].attrs['long_name'] = 'Epoch time of each cell in a track'
     dsout['basetime'].attrs['standard_name'] = 'time'
     dsout['basetime'].attrs['units'] = basetime_units
-
     dsout['cell_area2'].attrs['long_name'] = 'Area of the convective cell in a track'
     dsout['cell_area2'].attrs['units'] = 'km^2'
-
     dsout['max_reflectivity'].attrs['long_name'] = 'Maximum reflectivity profile in a track'
     dsout['max_reflectivity'].attrs['units'] = 'dBZ'
-
     dsout['npix_dbz0'].attrs['long_name'] = 'Number of pixel greater than 0 dBZ profile in a track'
     dsout['npix_dbz0'].attrs['units'] = 'counts'
     dsout['npix_dbz10'].attrs['long_name'] = 'Number of pixel greater than 10 dBZ profile in a track'
@@ -330,7 +311,6 @@ if __name__ == '__main__':
     dsout['npix_dbz50'].attrs['units'] = 'counts'
     dsout['npix_dbz60'].attrs['long_name'] = 'Number of pixel greater than 60 dBZ profile in a track'
     dsout['npix_dbz60'].attrs['units'] = 'counts'
-
     dsout['max_zdr'].attrs['long_name'] = 'Maximum ZDR profile in a track'
     dsout['max_zdr'].attrs['units'] = 'dB'
     dsout['max_kdp'].attrs['long_name'] = 'Maximum KDP profile in a track'
@@ -341,10 +321,8 @@ if __name__ == '__main__':
     dsout['max_Dm'].attrs['units'] = 'mm'
     dsout['max_lwc'].attrs['long_name'] = 'Maximum liquid water content profile in a track'
     dsout['max_lwc'].attrs['units'] = 'g/m^3'
-
     dsout['volrain'].attrs['long_name'] = 'Volumetric rainfall profile in a track'
     dsout['volrain'].attrs['units'] = 'm^3/h^1'
-
 
     # Specify encoding list
     fillval = -9999
@@ -373,7 +351,3 @@ if __name__ == '__main__':
     # Write netcdf file
     dsout.to_netcdf(path=output_filename, mode='w', format='NETCDF4_CLASSIC', unlimited_dims=trackdimname, encoding=encodelist)
     print(f'Output saved: {output_filename}')
-
-    # diff = cell_area_2 - cell_area
-    # print(np.nanmax(diff), np.nanmin(diff))
-    # import pdb; pdb.set_trace()
