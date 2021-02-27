@@ -1,5 +1,5 @@
-import os, glob
-import numpy as np
+import os, sys, glob
+import yaml
 import xarray as xr
 import xesmf as xe
 import dask
@@ -68,31 +68,26 @@ def regrid_goes16(file_in, dir_output, basename_output, ds_dst, weight_file):
 
 if __name__ == '__main__':
 
-    # Set flag to run in serial (0) or parallel (1)
-    run_parallel = 1
-    # Number of workers for Dask
-    n_workers = 35
-    # Threads per worker
-    threads_per_worker = 1
+    # Get configuration file name from input
+    config_file = sys.argv[1]
+    # year_month = sys.argv[2]
+    
+    # Read configuration from yaml file
+    stream = open(config_file, 'r')
+    config = yaml.full_load(stream)
+    run_parallel = config['run_parallel']
+    n_workers = config['n_workers']
+    threads_per_worker = config['threads_per_worker']
+    dates_input = config['dates_input']
+    dir_input = config['dir_input']
+    dir_output = config['dir_output']
+    file_radar = config['file_radar']
+    weight_file = config['weight_file']
+    basename_input = config['basename_input']
+    basename_output = config['basename_output']
 
-    # Input file directory
-    year_month = '201902'
-    dir_input = os.path.expandvars('$ICLASS') + f'cacti/corvisstpx2drectg16v4minnisX1.parallaxcorrected.c1/{year_month}/'
-    files_in = sorted(glob.glob(f'{dir_input}corvisstpx2drectg16v4minnisX1.parallaxcorrected.c1.{year_month}*.*.cdf'))
-    # files_in = sorted(glob.glob(f'{dir_input}corvisstpx2drectg16v4minnisX1.parallaxcorrected.c1.20190125.173034.cdf'))
-
-    # Destination grid (CSAPR grid file)
-    file_radar = os.path.expandvars('$ICLASS') + f'/cacti/radar_processing/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
-
-    # Pre-generated weight file (produced by test_regrid_goes16_to_csapr.ipynb)
-    weight_file_dir = os.path.expandvars('$ICLASS') + f'cacti/corvisstpx2drectg16v4minnisX1.regridweights.c1/'
-    # weight_file = f'{weight_file_dir}bilinear_728x672_441x441.nc'
-    weight_file = f'{weight_file_dir}nearest_s2d_728x672_441x441.nc'
-
-    # Output file directory
-    dir_output = os.path.expandvars('$ICLASS') + f'cacti/corvisstpx2drectg16v4minnisX1.parallaxcorrected_regrid2csapr2gridded.c1/'
-    basename_output = 'corvisstpx2drectg16v4minnisX1.regrid2csapr2gridded.c1.'
-
+    # Find all input files
+    files_in = sorted(glob.glob(f'{dir_input}{basename_input}{dates_input}*cdf'))
 
     # Read destination grid (CSAPR)
     ds_dst = xr.open_dataset(file_radar)
@@ -101,6 +96,7 @@ if __name__ == '__main__':
     ds_dst = ds_dst.assign_coords({'lon':ds_dst.lon, 'lat':ds_dst.lat})
 
     nfile = len(files_in)
+    print(f'Total number of files: {nfile}')
 
     ######################################################################################
     if run_parallel==0:
