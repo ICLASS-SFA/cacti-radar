@@ -6,9 +6,10 @@ n_workers: 32
 # Threads per worker
 threads_per_worker: 1
 # Dates to work on
-dates_input: '201901'
+dates_input: '201904'
 # Satellite data directory
-dir_input: '/global/cfs/projectdirs/m1657/avarble/GOES/corvisstpx2drectg16v4minnisX1.parallaxcorrected.c1/'
+#dir_input: '/global/cfs/projectdirs/m1657/avarble/GOES/corvisstpx2drectg16v4minnisX1.parallaxcorrected.c1/'
+dir_input: '/global/cscratch1/sd/avarble/cacti/GOES/corvisstpx2drectg16v4minnisX1.parallaxcorrected.c1/'
 # Destination grid (CSAPR grid file)
 file_radar: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_500m.Terrain_RangeMask.nc'
 # Pre-generated weight file (produced by test_regrid_goes16_to_csapr.ipynb)
