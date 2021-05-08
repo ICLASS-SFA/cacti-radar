@@ -68,16 +68,16 @@ if __name__ == '__main__':
 
     # Create a dictionary with variable name as key, and output arrays as values
     # Define the first dictionary entry as 'time'
-    out_vars = {'time': np.full((ntracks, nreltime), dtype=np.float, fill_value=np.nan)}
+    out_vars = {'time': np.full((ntracks, nreltime), dtype=np.float64, fill_value=np.nan)}
     # Loop over variable list to create the dictionary entry
     for ivar in sonde_var_names:
-        out_vars[ivar] = np.full((ntracks, nreltime), dtype=np.float, fill_value=np.nan)
+        out_vars[ivar] = np.full((ntracks, nreltime), dtype=np.float64, fill_value=np.nan)
 
     # Create match time index arrays
-    matchindex = np.zeros(ntracks, dtype=np.int)
-    matchindex_1h = np.zeros(ntracks, dtype=np.int)
-    matchindex_2h = np.zeros(ntracks, dtype=np.int)
-    matchindex_3h = np.zeros(ntracks, dtype=np.int)
+    matchindex = np.zeros(ntracks, dtype=np.int64)
+    matchindex_1h = np.zeros(ntracks, dtype=np.int64)
+    matchindex_2h = np.zeros(ntracks, dtype=np.int64)
+    matchindex_3h = np.zeros(ntracks, dtype=np.int64)
     skip_tracks = []
     skip_tracks_1h = []
     skip_tracks_2h = []
