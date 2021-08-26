@@ -40,6 +40,25 @@ def get_file_datetime(filenames, basename):
     return files_datetime
 
 def merge_files(convmask_file, rain_file, out_file, sat_file=None):
+    """
+    Combine several sets of netCDF files into a same file.
+
+    Parameters:
+    ===========
+    convmask_file: string
+        Convective mask filename.
+    rain_file: string
+        Rain rate filename.
+    out_file: string
+        Output filename.
+    sat_file: string <optional>
+        Satellite cloud retrieval filename.
+
+    Returns:
+    ===========
+    status: boolean
+        True or False.
+    """
     
     # Read convective mask file
     ds_convmask = xr.open_dataset(convmask_file)
@@ -56,7 +75,6 @@ def merge_files(convmask_file, rain_file, out_file, sat_file=None):
         if sat_file is not None:
             drop_satvars = ['time', 'lon', 'lat']
             ds_sat = xr.open_dataset(sat_file, drop_variables=drop_satvars)
-            # import pdb; pdb.set_trace()
 
             # Combine the datasets
             dsout = xr.combine_by_coords([ds_convmask, ds_rain, ds_sat], join='outer', combine_attrs='override')
@@ -200,4 +218,3 @@ if __name__ == '__main__':
 
         # Collect results from Dask
         final_results = dask.compute(*final_results)
-    # import pdb; pdb.set_trace()
