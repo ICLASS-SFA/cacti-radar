@@ -39,7 +39,7 @@ def regrid_goes16(file_in, dir_output, basename_output, ds_dst, weight_file):
     regridder_s2d = xe.Regridder(ds, ds_dst, 'nearest_s2d', reuse_weights=True, filename=weight_file)
 
     # Regrid the entire dataset
-    ds_out = regridder_s2d(ds)
+    ds_out = regridder_s2d(ds, keep_attrs=True)
 
     # Expand dataset to create a time dimension
     ds_out = ds_out.expand_dims(dim='time', axis=0)
@@ -85,6 +85,9 @@ if __name__ == '__main__':
     weight_file = config['weight_file']
     basename_input = config['basename_input']
     basename_output = config['basename_output']
+
+    # Create output directory
+    os.makedirs(dir_output, exist_ok=True)
 
     # Find all input files
     files_in = sorted(glob.glob(f'{dir_input}{basename_input}{dates_input}*cdf'))
