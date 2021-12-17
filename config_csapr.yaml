@@ -20,4 +20,5 @@ ppifile_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/taranis_corcs
 # Satellite pixel file directory
 satfile_path: '/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/corvisstpx2drectg16v4minnisX1.parallaxcorrected_regrid2csapr2gridded.c1/'
 # Sounding stats file
-sonde_file: '/global/project/projectdirs/m1657/jmarquis/EnvironmentParameters/Interpsonde_parameters_CACTI_AMF_2Oct-30Apr_h.nc'
+# sonde_file: '/global/project/projectdirs/m1657/jmarquis/EnvironmentParameters/Interpsonde_parameters_CACTI_AMF_2Oct-30Apr_h.nc'
+sonde_file: '/global/cfs/cdirs/m1657/zfeng/cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/stats/Interpsonde_parameters_CACTI_AMF_2Oct-30Apr_v3.1.1.nc'
