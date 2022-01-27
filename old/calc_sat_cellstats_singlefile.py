@@ -1,9 +1,9 @@
 import numpy as np
-import os, glob
-import time, datetime, calendar
-from math import pi
+import os
+# import time, datetime, calendar
+# from math import pi
 import xarray as xr
-import pandas as pd
+# import pandas as pd
 # from netCDF4 import Dataset, num2date, chartostring
 # from scipy.ndimage import label, binary_dilation, generate_binary_structure
 # from skimage.measure import regionprops
@@ -15,7 +15,6 @@ import pandas as pd
 def calc_sat_cellstats_singlefile(
     pixel_filename, 
     sat_filename, 
-    pixel_filebase, 
     idx_track, 
     pixel_radius
     ):
@@ -28,8 +27,6 @@ def calc_sat_cellstats_singlefile(
         Input cell pixel file name
     sat_filename: string
         Input satellite pixel file name
-    pixel_filebase: string
-        Input cell pixel file basename
     idx_track: array
         Track indices in the current pixel file
     pixel_radius: float
@@ -47,14 +44,8 @@ def calc_sat_cellstats_singlefile(
     If no matched cell exists in the file, returns None.
     """
 
-    # pixelfile_path = os.path.dirname(pixel_filename)
-    # prelength = len(pixelfile_path)+1 + len(pixel_filebase)
-    # ittdatetimestring = pixel_filename[prelength:(prelength+13)]
-
     # Check if satellite data file exist
-    # if os.path.isfile(pixel_filename):
     if os.path.isfile(sat_filename):
-        # print(pixel_filename)
         print(sat_filename)
 
         # Read satellite file
@@ -70,24 +61,17 @@ def calc_sat_cellstats_singlefile(
 
         # Read pixel-level track file
         ds = xr.open_dataset(pixel_filename, decode_times=False)
-        lon = ds['longitude'].values
-        lat = ds['latitude'].values
-        cloudid_basetime = ds['basetime'].values
+        # lon = ds['longitude'].values
+        # lat = ds['latitude'].values
+        # cloudid_basetime = ds['base_time'].values
         tracknumbermap = ds['tracknumber'].squeeze().values
         tracknumbermap_cmask = ds['tracknumber_cmask2'].squeeze().values
-        xdim = ds.dims['lon']
-        ydim = ds.dims['lat']
+        # xdim = ds.dims['lon']
+        # ydim = ds.dims['lat']
         ds.close()
 
-        # # Find all matching time indices from track stats file to the pixel file
-        # # The returned match indices are for [tracks, times] dimensions respectively
-        # matchindices = np.array(np.where(np.abs(stats_basetime - cloudid_basetime) < 1))
-        # idx_track = matchindices[0]
-        # idx_time = matchindices[1]
-
-        nmatchcloud = len(idx_track)
-
         # Create arrays for output statistics
+        nmatchcloud = len(idx_track)
         cell_area = np.full((nmatchcloud), np.nan, dtype=float)
         ctt_min = np.full((nmatchcloud), np.nan, dtype=float)
         tir_min = np.full((nmatchcloud), np.nan, dtype=float)
@@ -190,17 +174,56 @@ def calc_sat_cellstats_singlefile(
                     if (len(idx_ice[0]) > 0):
                         iwp_max[imatchcloud] = np.nanmax(lwp_iwp[idx_ice])
 
-                    # import pdb; pdb.set_trace()
-
-            return (
-                nmatchcloud, 
-                cell_area, 
-                ctt_min,
-                tir_min,
-                cth_max,
-                ctp_min,
-                area_liq,
-                area_ice,
-                lwp_max,
-                iwp_max
-                )
+            # Group outputs in dictionaries
+            out_dict = {
+                # "nmatchcloud": nmatchcloud,
+                "cell_area": cell_area, 
+                "cloud_top_temperature_min": ctt_min,
+                "temperature_ir_min": tir_min,
+                "cloud_top_height_max": cth_max,
+                "cloud_top_pressure_min": ctp_min,
+                "area_liquid": area_liq,
+                "area_ice": area_ice,
+                "lwp_max": lwp_max,
+                "iwp_max": iwp_max,
+            }
+            out_dict_attrs = {
+                # "nmatchcloud": nmatchcloud,
+                "cell_area": {
+                    "long_name": "Area of the convective cell in a track",
+                    "units": "km^2",
+                }, 
+                "cloud_top_temperature_min": {
+                    "long_name": "Minimum cloud top temperature in a track",
+                    "units": "K",
+                }, 
+                "temperature_ir_min": {
+                    "long_name": "Minimum IR temperature in a track",
+                    "units": "K",
+                }, 
+                "cloud_top_height_max": {
+                    "long_name": "Maximum cloud top height in a track",
+                    "units": "km",
+                }, 
+                "cloud_top_pressure_min": {
+                    "long_name": "Minimum cloud top pressure in a track",
+                    "units": "hPa",
+                }, 
+                "area_liquid": {
+                    "long_name": "Area of liquid cloud-top in a track",
+                    "units": "km^2",
+                }, 
+                "area_ice": {
+                    "long_name": "Area of ice cloud-top in a track",
+                    "units": "km^2",
+                }, 
+                "lwp_max": {
+                    "long_name": "Maximum liquid water path in a track",
+                    "units": "g/m^2",
+                }, 
+                "iwp_max": {
+                    "long_name": "Maximum ice water path in a track",
+                    "units": "g/m^2",
+                }, 
+            }
+            return out_dict, out_dict_attrs

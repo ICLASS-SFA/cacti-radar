@@ -1,9 +1,6 @@
 import numpy as np
-import os, glob
-import time, datetime, calendar
-from math import pi
+import os
 import xarray as xr
-import pandas as pd
 np.warnings.filterwarnings('ignore')
 # from netCDF4 import Dataset, num2date, chartostring
 # from scipy.ndimage import label, binary_dilation, generate_binary_structure
@@ -16,7 +13,6 @@ np.warnings.filterwarnings('ignore')
 def calc_3d_cellstats_singlefile(
     pixel_filename, 
     ppi_filename, 
-    pixel_filebase, 
     idx_track, 
     pixel_radius
     ):
@@ -29,8 +25,6 @@ def calc_3d_cellstats_singlefile(
         Input cell pixel file name
     ppi_filename: string
         Input 3D PPI gridded radar file name
-    pixel_filebase: string
-        Input cell pixel file basename
     idx_track: array
         Track indices in the current pixel file
     pixel_radius: float
@@ -67,40 +61,33 @@ def calc_3d_cellstats_singlefile(
 
         # Read pixel-level track file
         ds = xr.open_dataset(pixel_filename, decode_times=False)
-        xdim = ds.dims['lon']
-        ydim = ds.dims['lat']
-        lon = ds['longitude'].values
-        lat = ds['latitude'].values
         # Replace lon/lat coordinates with x/y
         ds['lon'] = dsv['x'].values
         ds['lat'] = dsv['y'].values
         ds = ds.rename({'lat':'y', 'lon':'x'})
         # Read variables
-        cloudid_basetime = ds['basetime'].values
+        # cloudid_basetime = ds['basetime'].values
         tracknumbermap = ds['tracknumber'].squeeze()
-        tracknumbermap_cmask = ds['tracknumber_cmask2'].squeeze()
-        # tracknumbermap = ds['tracknumber'].squeeze().values
-        # tracknumbermap_cmask = ds['tracknumber_cmask2'].squeeze().values
-        # import pdb; pdb.set_trace()
+        tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze()
         # ds.close()
 
         # Create arrays for output statistics
         nmatchcloud = len(idx_track)
-        cell_area = np.full((nmatchcloud), np.nan, dtype=float)
-        max_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        npix_dbz0 = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        npix_dbz10 = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        npix_dbz20 = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        npix_dbz30 = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        npix_dbz40 = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        npix_dbz50 = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        npix_dbz60 = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        max_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        max_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        max_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        max_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        max_lwc = np.full((nmatchcloud, zdim), np.nan, dtype=float)
-        volrain = np.full((nmatchcloud, zdim), np.nan, dtype=float)
+        cell_area = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        max_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        npix_dbz0 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        npix_dbz10 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        npix_dbz20 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        npix_dbz30 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        npix_dbz40 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        npix_dbz50 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        npix_dbz60 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        max_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        max_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        max_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        max_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        max_lwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        volrain = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
 
         if (nmatchcloud > 0):
             
@@ -199,38 +186,89 @@ def calc_3d_cellstats_singlefile(
                     # h * area * 1e3 has unit of [m^3 h^(-1)]
                     volrain[imatchcloud,:] = np.nansum(sub_rainrate, axis=(1,2)) * pixel_radius**2 * 1e3
 
-                    # Loop over each vertical level
-                    # for iz in range(zdim):
-                    #     # print(height[iz])
-                    #     # Count number of pixels > X dBZ
-                    #     npix_dbz0[imatchcloud,iz] = np.count_nonzero(sub_dbz[iz,:,:] > 0)
-                    #     npix_dbz10[imatchcloud,iz] = np.count_nonzero(sub_dbz[iz,:,:] > 10)
-                    #     npix_dbz20[imatchcloud,iz] = np.count_nonzero(sub_dbz[iz,:,:] > 20)
-                    #     npix_dbz30[imatchcloud,iz] = np.count_nonzero(sub_dbz[iz,:,:] > 30)
-                    #     npix_dbz40[imatchcloud,iz] = np.count_nonzero(sub_dbz[iz,:,:] > 40)
-                    #     npix_dbz50[imatchcloud,iz] = np.count_nonzero(sub_dbz[iz,:,:] > 50)
-                    #     npix_dbz60[imatchcloud,iz] = np.count_nonzero(sub_dbz[iz,:,:] > 60)
-
-                    # import matplotlib.pyplot as plt
-                    # import pdb; pdb.set_trace()
                 else:
                     print(f'No cell matching track # {itracknum}')
 
-            return (
-                nmatchcloud, 
-                cell_area, 
-                max_dbz,
-                npix_dbz0,
-                npix_dbz10,
-                npix_dbz20,
-                npix_dbz30,
-                npix_dbz40,
-                npix_dbz50,
-                npix_dbz60,
-                max_zdr,
-                max_kdp,
-                max_rainrate,
-                max_Dm,
-                max_lwc,
-                volrain
-                )
+            # Group outputs in dictionaries
+            out_dict = {
+                # nmatchcloud, 
+                "cell_area": cell_area,
+                "max_reflectivity": max_dbz,
+                "npix_dbz0": npix_dbz0,
+                "npix_dbz10": npix_dbz10,
+                "npix_dbz20": npix_dbz20,
+                "npix_dbz30": npix_dbz30,
+                "npix_dbz40": npix_dbz40,
+                "npix_dbz50": npix_dbz50,
+                "npix_dbz60": npix_dbz60,
+                "max_zdr": max_zdr,
+                "max_kdp": max_kdp,
+                "max_rainrate": max_rainrate,
+                "max_Dm": max_Dm,
+                "max_lwc": max_lwc,
+                "volrain": volrain,
+            }
+            out_dict_attrs = {
+                "cell_area": {
+                    "long_name": "Area of the convective cell in a track",
+                    "units": "km^2",
+                }, 
+                'max_reflectivity': {
+                    "long_name": 'Maximum reflectivity profile in a track',
+                    "units": "dBZ",
+                },
+                'npix_dbz0': {
+                    "long_name": "Number of pixel greater than 0 dBZ profile in a track",
+                    "units": "counts",
+                },
+                'npix_dbz10': {
+                    "long_name": "Number of pixel greater than 10 dBZ profile in a track",
+                    "units": "counts",
+                },
+                'npix_dbz20': {
+                    "long_name": "Number of pixel greater than 20 dBZ profile in a track",
+                    "units": "counts",
+                },
+                'npix_dbz30': {
+                    "long_name": "Number of pixel greater than 30 dBZ profile in a track",
+                    "units": "counts",
+                },
+                'npix_dbz40': {
+                    "long_name": "Number of pixel greater than 40 dBZ profile in a track",
+                    "units": "counts",
+                },
+                'npix_dbz50': {
+                    "long_name": "Number of pixel greater than 50 dBZ profile in a track",
+                    "units": "counts",
+                },
+                'npix_dbz60': {
+                    "long_name": "Number of pixel greater than 60 dBZ profile in a track",
+                    "units": "counts",
+                },
+
+                'max_zdr': {
+                    "long_name": "Maximum ZDR profile in a track",
+                    "units": "dB",
+                },
+                'max_kdp': {
+                    "long_name": "Maximum KDP profile in a track",
+                    "units": "degrees/km",
+                },
+                'max_rainrate': {
+                    "long_name": "Maximum rain rate profile in a track",
+                    "units": "mm/hr",
+                },
+                'max_Dm': {
+                    "long_name": "Maximum mass weighted mean diameter profile in a track",
+                    "units": "mm",
+                },
+                'max_lwc': {
+                    "long_name": "Maximum liquid water content profile in a track",
+                    "units": "g/m^3",
+                },
+                'volrain': {
+                    "long_name": "Volumetric rainfall profile in a track",
+                    "units": "m^3/h^1",
+                },
+            }
+            return out_dict, out_dict_attrs
