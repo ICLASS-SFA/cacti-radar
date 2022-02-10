@@ -2,7 +2,7 @@
 # Run in parallel
 run_parallel: 1
 # Number of workers for Dask
-n_workers: 30
+n_workers: 32
 # Threads per worker
 threads_per_worker: 1
 # Start/end date/time
