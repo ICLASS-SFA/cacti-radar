@@ -36,13 +36,13 @@ if __name__ == '__main__':
     times_dimname = 'times'
 
     # Read 2D track data
-    stats2d = xr.open_dataset(trackstats_file, mask_and_scale=False)
+    stats2d = xr.open_dataset(trackstats_file, drop_variables=['cloudnumber'], mask_and_scale=False)
     time_res = stats2d.attrs['time_resolution_hour']
     pixel_radius = stats2d.attrs['pixel_radius_km']
     print(f"Number of cell tracks (2D): {stats2d.dims['tracks']}")
 
     # Read 3D track data
-    stats3d = xr.open_dataset(trackstats_3dfile, mask_and_scale=False)
+    stats3d = xr.open_dataset(trackstats_3dfile, drop_variables=['base_time', 'cell_area'], mask_and_scale=False)
     print(f"Number of cell tracks (3D): {stats3d.dims['tracks']}")
 
     # Read satellite data
@@ -63,6 +63,8 @@ if __name__ == '__main__':
         'U_850mb', 'V_850mb', 'U_700mb', 'V_700mb', 
     ]
     sonde = sonde[sonde_varlist]
+    # Only keep reltime at 0 hour lag
+    sonde = sonde.sel(reltime=0)
 
     # Combine datasets by coordinates
     dsout = xr.combine_by_coords([stats2d, stats3d, sat, sonde], combine_attrs='drop').compute()
@@ -75,6 +77,8 @@ if __name__ == '__main__':
         'Created_on':  time.ctime(time.time()),
         'startdate': startdate,
         'enddate': enddate,
+        'time_resolution_hour': time_res,
+        'pixel_radius_km': pixel_radius,
     }
     dsout.attrs = gattr_dict
 
