@@ -10,7 +10,6 @@ import yaml
 import xarray as xr
 import dask
 from dask.distributed import Client, LocalCluster
-from calc_sat_cellstats_singlefile import calc_sat_cellstats_singlefile
 
 #########################################################
 def calc_basetime(filelist, filebase):
@@ -48,13 +47,191 @@ def calc_basetime(filelist, filebase):
         file_dict[basetime[ifile]] = filelist[ifile]
     return basetime, file_dict
 
+#########################################################
+def calc_sat_cellstats_singlefile(
+    pixel_filename, 
+    sat_filename, 
+    idx_track, 
+    pixel_radius
+    ):
+    """
+    Calculates cell statistics from matching satellite data in a single pixel file.
 
+    Parameters:
+    ===========
+    pixel_filename: string
+        Input cell pixel file name
+    sat_filename: string
+        Input satellite pixel file name
+    idx_track: array
+        Track indices in the current pixel file
+    pixel_radius: float
+        Pixel size.
+
+    Returns:
+    ===========
+    nmatchcloud: <int>
+        Number of matched cells in this file
+    cell_area: <array>
+        Cell area for each matched cell
+    ctt_min: <array>
+        Minimum cloud-top temperature for each matched cell
+    
+    If no matched cell exists in the file, returns None.
+    """
+
+    # Check if satellite data file exist
+    if os.path.isfile(sat_filename):
+        print(sat_filename)
+
+        # Read satellite file
+        dsv = xr.open_dataset(sat_filename)
+        tir = dsv['temperature_ir'].squeeze().values
+        ctt = dsv['cloud_top_temperature'].squeeze().values
+        cth = dsv['cloud_top_height'].squeeze().values
+        ctp = dsv['cloud_top_pressure'].squeeze().values
+        # cep = dsv['cloud_effective_pressure'].squeeze().values
+        phase = dsv['cloud_phase'].squeeze().values
+        lwp_iwp = dsv['cloud_lwp_iwp'].squeeze().values
+        dsv.close()
+
+        # Read pixel-level track file
+        ds = xr.open_dataset(pixel_filename, decode_times=False)
+        # cloudid_basetime = ds['base_time'].values
+        # tracknumbermap = ds['tracknumber'].squeeze().values
+        tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze().values
+        ds.close()
+
+        # Create arrays for output statistics
+        nmatchcloud = len(idx_track)
+        cell_area = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        ctt_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        tir_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        cth_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        ctp_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        area_liq = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        area_ice = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        lwp_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        iwp_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
+
+        if (nmatchcloud > 0):
+            
+            # Loop over each match tracked cloud
+            for imatchcloud in range(nmatchcloud):
+
+                # Intialize array for keeping data associated with the tracked cell
+                # filtered_ctt = np.full((ydim, xdim), np.nan, dtype=float)
+
+                # Track number needs to add 1
+                itracknum = idx_track[imatchcloud] + 1
+
+                # Count the number of pixels for the original cell mask
+                inpix_cloud = np.count_nonzero(tracknumbermap_cmask == itracknum)
+
+                # Index location of original cell mask
+                idx_cloudorig = np.where(tracknumbermap_cmask == itracknum)
+                # Index location of dilated cell mask
+                # idx_clouddilated = np.where(tracknumbermap == itracknum)
+                # Cell mask with liquid/ice phase
+                idx_liq = np.where((tracknumbermap_cmask == itracknum) & (phase == 1))
+                idx_ice = np.where((tracknumbermap_cmask == itracknum) & (phase == 2))
+
+                # Get location indices of the cloud
+                # icloudlocationy, icloudlocationx = np.where(tracknumbermap_cmask == itracknum)
+                # inpix_cloud = len(icloudlocationy)
+
+                # Proceed if the number matching cloud pixel > 0
+                if inpix_cloud > 0:
+
+                    # Subset variables to the current cell mask (original)
+                    sub_ctt = ctt[idx_cloudorig]
+                    sub_tir = tir[idx_cloudorig]
+                    sub_cth = cth[idx_cloudorig]
+                    sub_ctp = ctp[idx_cloudorig]
+                    sub_phase = phase[idx_cloudorig]
+
+                    # Subset variables to the current cell mask (dilated)
+                    # sub_ctt = ctt[idx_clouddilated]
+                    # sub_tir = tir[idx_clouddilated]
+                    # sub_cth = cth[idx_clouddilated]
+                    # sub_ctp = ctp[idx_clouddilated]
+                    # sub_phase = phase[idx_clouddilated]
+                    
+                    cell_area[imatchcloud] = inpix_cloud * pixel_radius**2
+
+                    # Calculate new statistics of the cloud
+                    # Minimum/Maximum cloud-top variables
+                    ctt_min[imatchcloud] = np.nanmin(sub_ctt)
+                    tir_min[imatchcloud] = np.nanmin(sub_tir)
+                    cth_max[imatchcloud] = np.nanmax(sub_cth)
+                    ctp_min[imatchcloud] = np.nanmin(sub_ctp)
+                    # Area with liquid/ice from cloud phase flags
+                    # 0=clear with snow/ice, 1=water, 2=ice, 3=no retrieval, 4=clear, 5=bad retrieval, 6=weak water, 7=weak ice
+                    area_liq[imatchcloud] = np.count_nonzero(sub_phase == 1) * pixel_radius**2
+                    area_ice[imatchcloud] = np.count_nonzero(sub_phase == 2) * pixel_radius**2
+
+                    if (len(idx_liq[0]) > 0):
+                        lwp_max[imatchcloud] = np.nanmax(lwp_iwp[idx_liq])
+                    if (len(idx_ice[0]) > 0):
+                        iwp_max[imatchcloud] = np.nanmax(lwp_iwp[idx_ice])
+
+            # Group outputs in dictionaries
+            out_dict = {
+                # "nmatchcloud": nmatchcloud,
+                "cell_area": cell_area, 
+                "cloud_top_temperature_min": ctt_min,
+                "temperature_ir_min": tir_min,
+                "cloud_top_height_max": cth_max,
+                "cloud_top_pressure_min": ctp_min,
+                "area_liquid": area_liq,
+                "area_ice": area_ice,
+                "lwp_max": lwp_max,
+                "iwp_max": iwp_max,
+            }
+            out_dict_attrs = {
+                # "nmatchcloud": nmatchcloud,
+                "cell_area": {
+                    "long_name": "Area of the convective cell in a track",
+                    "units": "km^2",
+                }, 
+                "cloud_top_temperature_min": {
+                    "long_name": "Minimum cloud top temperature in a track",
+                    "units": "K",
+                }, 
+                "temperature_ir_min": {
+                    "long_name": "Minimum IR temperature in a track",
+                    "units": "K",
+                }, 
+                "cloud_top_height_max": {
+                    "long_name": "Maximum cloud top height in a track",
+                    "units": "km",
+                }, 
+                "cloud_top_pressure_min": {
+                    "long_name": "Minimum cloud top pressure in a track",
+                    "units": "hPa",
+                }, 
+                "area_liquid": {
+                    "long_name": "Area of liquid cloud-top in a track",
+                    "units": "km^2",
+                }, 
+                "area_ice": {
+                    "long_name": "Area of ice cloud-top in a track",
+                    "units": "km^2",
+                }, 
+                "lwp_max": {
+                    "long_name": "Maximum liquid water path in a track",
+                    "units": "g/m^2",
+                }, 
+                "iwp_max": {
+                    "long_name": "Maximum ice water path in a track",
+                    "units": "g/m^2",
+                }, 
+            }
+            return out_dict, out_dict_attrs
+
+
+#########################################################
 if __name__ == '__main__':
-
-    #########################################################
-    # Load MCS track stats
-    # print('Loading track stats file')
-    print((time.ctime()))
 
     # Get configuration file name from input
     config_file = sys.argv[1]
@@ -75,7 +252,7 @@ if __name__ == '__main__':
     output_path = stats_path
 
     # Input file basenames
-    stats_filebase = 'stats_tracknumbersv1.0_'
+    stats_filebase = 'trackstats_'
     pixel_filebase = 'celltracks_'
     sat_filebase = 'corvisstpx2drectg16v4minnisX1.regrid2csapr2gridded.c1.'
 
@@ -83,8 +260,8 @@ if __name__ == '__main__':
     output_filename = f'{output_path}stats_goes16_{startdate}_{enddate}.nc'
 
     # Track statistics file dimension names
-    trackdimname = 'tracks'
-    timedimname = 'times'
+    tracks_dimname = 'tracks'
+    times_dimname = 'times'
 
     # Track statistics file
     trackstats_file = f'{stats_path}{stats_filebase}{startdate}_{enddate}.nc'
@@ -101,13 +278,7 @@ if __name__ == '__main__':
 
     # Find matching satellite files for each pixel file
     match_satfilelist = [''] * nfiles
-    # match_pixelbasetime = np.full(nfiles, np.NaN, dtype=np.float)
     for ifile in range(nfiles):
-        # # Check if the pixel file basetime key is in the satellite dictionary
-        # # This assumes the pixel file basetime is exactly the same with the satellite basetime
-        # if pixel_basetime[ifile] in satfile_dict:
-        #     match_satfilelist[ifile] = satfile_dict[pixel_basetime[ifile]]
-
         # Find satellite time closest to the pixel file time and get the index
         # Save the filename if time difference is < time_window
         idx = np.argmin(np.abs(sat_basetime - pixel_basetime[ifile]))        
@@ -116,62 +287,49 @@ if __name__ == '__main__':
         else:
             print(f'No match file found for: {pixelfilelist[ifile]}')
 
-    # import pdb; pdb.set_trace()
-
 
     # Read track statistics file
     print(trackstats_file)
     dsstats = xr.open_dataset(trackstats_file, decode_times=False)
-    ntracks = dsstats.dims[trackdimname]
-    ntimes = dsstats.dims[timedimname]
-    stats_basetime = dsstats['basetime'].values
-    basetime_units = dsstats['basetime'].units
-    cell_area = dsstats['cell_area'].values
+    ntracks = dsstats.dims[tracks_dimname]
+    ntimes = dsstats.dims[times_dimname]
+    stats_basetime = dsstats['base_time']
+    cell_area = dsstats['cell_area']
     pixel_radius = dsstats.attrs['pixel_radius_km']
     dsstats.close()
 
     print(f'Total Number of Tracks: {ntracks}')
     
 
-    # Create new statistics variables
-    # cell_area_2 is to double check with that from the track statistics file to make sure they match exactly
-    cell_area_2 = np.full((ntracks, ntimes), np.nan, dtype=float)
-    ctt_min = np.full((ntracks, ntimes), np.nan, dtype=float)
-    tir_min = np.full((ntracks, ntimes), np.nan, dtype=float)
-    cth_max = np.full((ntracks, ntimes), np.nan, dtype=float)
-    ctp_min = np.full((ntracks, ntimes), np.nan, dtype=float)
-    area_liq = np.full((ntracks, ntimes), np.nan, dtype=float)
-    area_ice = np.full((ntracks, ntimes), np.nan, dtype=float)
-    lwp_max = np.full((ntracks, ntimes), np.nan, dtype=float)
-    iwp_max = np.full((ntracks, ntimes), np.nan, dtype=float)
-
     ##############################################################
     # Call function to calculate statistics
-    nmatchcloud_all = []
-    matchindices_all = []
+    trackindices_all = []
+    timeindices_all = []
     final_results = []
     if run_parallel==0:
         # Loop over each pixel-file and call function to calculate
         for ifile in range(nfiles):
             # Find all matching time indices from track stats file to the current pixel file
-            matchindices = np.array(np.where(np.abs(stats_basetime - pixel_basetime[ifile]) < time_window))
+            matchindices = np.array(
+                np.where(np.abs(stats_basetime.values - pixel_basetime[ifile]) < time_window)
+            )
             # The returned match indices are for [tracks, times] dimensions respectively
             idx_track = matchindices[0]
             idx_time = matchindices[1]
-            # Save matchindices for the current pixel file to the overall list
-            nmatchcloud_all.append(len(idx_track))
-            matchindices_all.append(matchindices)
 
-            # iresult = calc_sat_cellstats_singlefile(pixelfilelist[ifile], match_satfilelist[ifile], pixel_filebase, stats_basetime, pixel_radius)
-            iresult = calc_sat_cellstats_singlefile(
-                        pixelfilelist[ifile], 
-                        match_satfilelist[ifile], 
-                        pixel_filebase, 
-                        idx_track, 
-                        pixel_radius
-                        )
-            final_results.append(iresult)
-            # import pdb; pdb.set_trace()
+            if len(idx_track) > 0:
+                # Save matchindices for the current pixel file to the overall list
+                trackindices_all.append(idx_track)
+                timeindices_all.append(idx_time)
+
+                iresult = calc_sat_cellstats_singlefile(
+                            pixelfilelist[ifile], 
+                            match_satfilelist[ifile],
+                            idx_track, 
+                            pixel_radius
+                            )
+                final_results.append(iresult)
+                # import pdb; pdb.set_trace()
 
     elif run_parallel==1:
         print(f'Parallel version by dask')
@@ -183,87 +341,81 @@ if __name__ == '__main__':
         # Loop over each pixel-file and call function to calculate
         for ifile in range(nfiles):
             # Find all matching time indices from robust MCS stats file to the current pixel file
-            matchindices = np.array(np.where(np.abs(stats_basetime - pixel_basetime[ifile]) < 1))
+            matchindices = np.array(
+                np.where(np.abs(stats_basetime.values - pixel_basetime[ifile]) < time_window)
+            )
             # The returned match indices are for [tracks, times] dimensions respectively
             idx_track = matchindices[0]
             idx_time = matchindices[1]
-            # Save matchindices for the current pixel file to the overall list
-            nmatchcloud_all.append(len(idx_track))
-            matchindices_all.append(matchindices)
 
-            iresult = dask.delayed(calc_sat_cellstats_singlefile)(
-                        pixelfilelist[ifile], 
-                        match_satfilelist[ifile], 
-                        pixel_filebase, 
-                        idx_track, 
-                        pixel_radius
-                        )
-            # iresult = delayed(calc_sat_cellstats_singlefile)(pixelfilelist[ifile], match_satfilelist[ifile], pixel_filebase, stats_basetime, pixel_radius)
-            final_results.append(iresult)
+            if len(idx_track) > 0:
+                # Save matchindices for the current pixel file to the overall list
+                trackindices_all.append(idx_track)
+                timeindices_all.append(idx_time)
+
+                iresult = dask.delayed(calc_sat_cellstats_singlefile)(
+                            pixelfilelist[ifile], 
+                            match_satfilelist[ifile], 
+                            idx_track, 
+                            pixel_radius
+                            )
+                final_results.append(iresult)
             
         # Collect results from Dask
         print("Computing statistics ...")
         final_results = dask.compute(*final_results)
+    
 
-    # import pdb; pdb.set_trace()
+    # Make a variable list from one of the returned dictionaries
+    var_names = list(final_results[0][0].keys())
+    # Get variable attributes from one of the returned dictionaries
+    var_attrs = final_results[0][1]
+
+    # Loop over variable list to create the dictionary entry
+    out_dict = {}
+    out_dict_attrs = {}
+    for ivar in var_names:
+        out_dict[ivar] = np.full((ntracks, ntimes), np.nan, dtype=np.float32)
+        out_dict_attrs[ivar] = var_attrs[ivar]
+
+    # The number of returned results
+    nresults = len(final_results)
 
     # Now that all calculations for each pixel file is done, put the results back to the tracks format
-    # Loop over the returned statistics list, organized by file
-    for ifile in range(nfiles):
+    # Loop over the returned statistics list
+    for ifile in range(nresults):
         # Get the results from the current file
         vars = final_results[ifile]
         if (vars is not None):
-            # # The returned results from calc_sat_cellstats_singlefile are:
-            # # nmatchcloud, matchindices, var1, [var2, var3, ...]
-            # # Get the returned variables in order
-            # nmatchcloudtmp = vars[0]
-            # matchindicestmp = vars[1]
-            # Get the match track indices (matchindicestmp contains: [track_index, time_index]) for this pixel file
-            nmatchcloudtmp = nmatchcloud_all[ifile]
-            matchindicestmp = matchindices_all[ifile]
-            # import pdb; pdb.set_trace()
+            # Get the return results for this pixel file
+            # The result is a tuple: (out_dict, out_dict_attrs)
+            # The first entry is the dictionary containing the variables
+            iResult = final_results[ifile][0]
 
-            # if nmatchcloudtmp > 0:
+            # Get trackindices and timeindices for this file
+            trackindices = trackindices_all[ifile]
+            timeindices = timeindices_all[ifile]
 
-            # Loop over each matched cloud, and put them back in the track variable
-            for imatch in range(nmatchcloudtmp):
-                # matchindices are in [tracks, times]
-                cell_area_2[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[1][imatch]
-                ctt_min[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[2][imatch]
-                tir_min[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[3][imatch]
-                cth_max[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[4][imatch]
-                ctp_min[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[5][imatch]
-                area_liq[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[6][imatch]
-                area_ice[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[7][imatch]
-                lwp_max[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[8][imatch]
-                iwp_max[matchindicestmp[0,imatch],matchindicestmp[1,imatch]] = vars[9][imatch]
+            # Loop over each variable and assign values to output dictionary
+            for ivar in var_names:
+                out_dict[ivar][trackindices,timeindices] = iResult[ivar]
 
 
     ##################################
     # Write to netcdf
     print('Writing output netcdf ... ')
-    t0_write = time.time()
 
     # Define variable list
-    varlist = {'basetime': ([trackdimname, timedimname], stats_basetime), \
-               'cell_area': ([trackdimname, timedimname], cell_area_2), \
-               'cloud_top_temperature_min': ([trackdimname, timedimname], ctt_min), \
-                'temperature_ir_min': ([trackdimname, timedimname], tir_min), \
-                'cloud_top_height_max': ([trackdimname, timedimname], cth_max), \
-                'cloud_top_pressure_min': ([trackdimname, timedimname], ctp_min), \
-                'area_liquid': ([trackdimname, timedimname], area_liq), \
-                'area_ice': ([trackdimname, timedimname], area_ice), \
-                'lwp_max': ([trackdimname, timedimname], lwp_max), \
-                'iwp_max': ([trackdimname, timedimname], iwp_max), \
-              }
-
+    varlist = {}
+    # Define output variable dictionary
+    for key, value in out_dict.items():
+        varlist[key] = ([tracks_dimname, times_dimname], value, out_dict_attrs[key])
     # Define coordinate list
-    coordlist = {trackdimname: ([trackdimname], np.arange(0, ntracks)), \
-                 timedimname: ([timedimname], np.arange(0, ntimes)), \
+    coordlist = {tracks_dimname: ([tracks_dimname], np.arange(0, ntracks)), \
+                 times_dimname: ([times_dimname], np.arange(0, ntimes)), \
                 }
-
     # Define global attributes
-    gattrlist = {'title':  'Track statistics', \
+    gattrlist = {'title':  'GOES16 cell track statistics', \
                  'Institution': 'Pacific Northwest National Laboratoy', \
                  'Contact': 'Zhe Feng, zhe.feng@pnnl.gov', \
                  'Created_on':  time.ctime(time.time()), \
@@ -274,46 +426,19 @@ if __name__ == '__main__':
     # Define xarray dataset
     dsout = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
 
-    dsout.basetime.attrs['long_name'] = 'Epoch time of each cell in a track'
-    dsout.basetime.attrs['standard_name'] = 'time'
-    dsout.basetime.attrs['units'] = basetime_units
-    dsout.cell_area.attrs['long_name'] = 'Area of the convective cell in a track'
-    dsout.cell_area.attrs['units'] = 'km^2'
-    dsout.cloud_top_temperature_min.attrs['long_name'] = 'Minimum cloud top temperature in a track'
-    dsout.cloud_top_temperature_min.attrs['units'] = 'K'
-    dsout.temperature_ir_min.attrs['long_name'] = 'Minimum IR temperature in a track'
-    dsout.temperature_ir_min.attrs['units'] = 'K'
-    dsout.cloud_top_height_max.attrs['long_name'] = 'Maximum cloud top height in a track'
-    dsout.cloud_top_height_max.attrs['units'] = 'km'
-    dsout.cloud_top_pressure_min.attrs['long_name'] = 'Minimum cloud top pressure in a track'
-    dsout.cloud_top_pressure_min.attrs['units'] = 'hPa'
-    dsout.area_liquid.attrs['long_name'] = 'Area of liquid cloud-top in a track'
-    dsout.area_liquid.attrs['units'] = 'km^2'
-    dsout.area_ice.attrs['long_name'] = 'Area of ice cloud-top in a track'
-    dsout.area_ice.attrs['units'] = 'km^2'
-    dsout.lwp_max.attrs['long_name'] = 'Maximum liquid water path in a track'
-    dsout.lwp_max.attrs['units'] = 'g/m^2'
-    dsout.iwp_max.attrs['long_name'] = 'Maximum ice water path in a track'
-    dsout.iwp_max.attrs['units'] = 'g/m^2'
+    # Add variables from cell track stats to the output
+    dsout['base_time'] = stats_basetime
+    # dsout['cell_area'] = cell_area
 
-    # Specify encoding list
-    fillval = -9999
-    var_float_encode = {'dtype':'float32', 'zlib':True, '_FillValue': np.nan}
-    var_int_encode = {'dtype': 'int', 'zlib':True, '_FillValue': fillval}
-    encodelist = {#'lifetime': var_int_encode, \
-                  #     'basetime': {'zlib':True, 'units': basetime_units}, \
-                'basetime': {'zlib':True}, \
-                'cell_area': var_float_encode, \
-                'cloud_top_temperature_min': var_float_encode, \
-                'temperature_ir_min': var_float_encode, \
-                'cloud_top_height_max': var_float_encode, \
-                'cloud_top_pressure_min': var_float_encode, \
-                'area_liquid': var_float_encode, \
-                'area_ice': var_float_encode, \
-                'lwp_max': var_float_encode, \
-                'iwp_max': var_float_encode, \
-                 }
+    # Delete file if it already exists
+    if os.path.isfile(output_filename):
+        os.remove(output_filename)
+        
+    # Set encoding/compression for all variables
+    comp = dict(zlib=True)
+    encoding = {var: comp for var in dsout.data_vars}
 
-    # Write netcdf file
-    dsout.to_netcdf(path=output_filename, mode='w', format='NETCDF4_CLASSIC', unlimited_dims=trackdimname, encoding=encodelist)
+    # Write to netcdf file
+    dsout.to_netcdf(path=output_filename, mode="w",
+                    format="NETCDF4", unlimited_dims=tracks_dimname, encoding=encoding)
     print(f'Output saved: {output_filename}')

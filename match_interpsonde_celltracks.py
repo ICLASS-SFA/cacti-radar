@@ -22,7 +22,8 @@ if __name__ == '__main__':
     print(f'Max time window allowed to match the datasets: {time_window} s')
 
     # Input file basenames
-    stats_filebase = 'stats_tracknumbersv1.0_'
+    # stats_filebase = 'stats_tracknumbersv1.0_'
+    stats_filebase = 'trackstats_'
 
     # Output statistics filename
     output_path = stats_path
@@ -41,8 +42,8 @@ if __name__ == '__main__':
     dsstats = xr.open_dataset(trackstats_file, decode_times=False)
     ntracks = dsstats.dims[trackdimname]
     # ntimes = dsstats.dims[timedimname]
-    stats_basetime = dsstats['basetime']
-    basetime_units = dsstats['basetime'].units
+    stats_basetime = dsstats['base_time']
+    basetime_units = dsstats['base_time'].units
     # Get cell initiation time
     stats_basetime0 = stats_basetime.sel(times=0).data
     dsstats.close()
