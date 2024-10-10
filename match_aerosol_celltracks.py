@@ -39,11 +39,11 @@ if __name__ == '__main__':
 
     # Read track statistics file
     print(trackstats_file)
-    dsstats = xr.open_dataset(trackstats_file, decode_times=False)
+    dsstats = xr.open_dataset(trackstats_file, decode_times=True)
     ntracks = dsstats.dims[trackdimname]
     # ntimes = dsstats.dims[timedimname]
     stats_basetime = dsstats['base_time']
-    basetime_units = dsstats['base_time'].units
+    # basetime_units = dsstats['base_time'].units
     # Get cell initiation time
     stats_basetime0 = stats_basetime.sel(times=0).data
     dsstats.close()
@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
 
     # Read aerosol file
-    dsmup = xr.open_dataset(aerosol_file, decode_times=False)
+    dsmup = xr.open_dataset(aerosol_file, decode_times=True)
     aerosol_basetime = dsmup.time.values
 
     # Create a variable list
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         dsout[ivar].attrs = dsmup[ivar].attrs
 
     dsout['time'].attrs['long_name'] = 'Epoch time of closest interpsonde'
-    dsout['time'].attrs['units'] = basetime_units
+    # dsout['time'].attrs['units'] = basetime_units
 
     dsout[relative_time_dimname].attrs['long_name'] = 'Relative sonde time prior to track initiation'
     dsout[relative_time_dimname].attrs['units'] = 'hour'
