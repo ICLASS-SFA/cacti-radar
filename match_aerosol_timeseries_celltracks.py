@@ -18,7 +18,7 @@ if __name__ == '__main__':
     startdate = config['startdate']
     enddate = config['enddate']
     stats_path = config['stats_path']
-    sonde_file = config['sonde_file']
+    sonde_file = config['aerosol_file']
 
     # Number of relative hours prior to track start to make time series
     nhours = 3
@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # Output statistics filename
     output_path = stats_path
-    output_filename = f'{output_path}interpsonde_parameters_celltrack_{startdate}_{enddate}.nc'
+    output_filename = f'{output_path}aerosol_parameters_celltrack_{startdate}_{enddate}.nc'
 
     # Track statistics file dimension names
     trackdimname = 'tracks'
@@ -70,8 +70,8 @@ if __name__ == '__main__':
     # Add time to the list (since time is a coordinate, it is not included in the data_vars)
     sonde_var_names.append('time')
     # Drop yyyymmdd, hhmmss variables from the list (not sure how to handle char arrays yet)
-    sonde_var_names.remove('yyyymmdd')
-    sonde_var_names.remove('hhmmss')
+    sonde_var_names.remove('base_time')
+    sonde_var_names.remove('time_offset')
 
 
     # Calculate the number of times to save prior to initiation
