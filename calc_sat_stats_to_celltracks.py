@@ -53,7 +53,7 @@ def calc_sat_cellstats_singlefile(
     sat_filename, 
     idx_track, 
     pixel_radius
-    ):
+):
     """
     Calculates cell statistics from matching satellite data in a single pixel file.
 
@@ -99,7 +99,14 @@ def calc_sat_cellstats_singlefile(
         ds = xr.open_dataset(pixel_filename, decode_times=False)
         # cloudid_basetime = ds['base_time'].values
         # tracknumbermap = ds['tracknumber'].squeeze().values
-        tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze().values
+        # tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze().values
+        cmask = ds['conv_mask'].squeeze().values
+        tracknumbermap = ds['tracknumber'].squeeze().values
+        # Get cell tracknumber mask
+        # Convert convective cell mask to binary, then multiply by tracknumber
+        tracknumbermap_cmask = (cmask > 0) * tracknumbermap
+        # Replace background values with NaN
+        tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
         ds.close()
 
         # Create arrays for output statistics
@@ -119,36 +126,35 @@ def calc_sat_cellstats_singlefile(
             # Loop over each match tracked cloud
             for imatchcloud in range(nmatchcloud):
 
-                # Intialize array for keeping data associated with the tracked cell
-                # filtered_ctt = np.full((ydim, xdim), np.nan, dtype=float)
-
                 # Track number needs to add 1
                 itracknum = idx_track[imatchcloud] + 1
 
+                # Get current cell mask
+                itrackcmask = tracknumbermap_cmask == itracknum
+
                 # Count the number of pixels for the original cell mask
-                inpix_cloud = np.count_nonzero(tracknumbermap_cmask == itracknum)
+                inpix_cloud = np.count_nonzero(itrackcmask)
 
                 # Index location of original cell mask
-                idx_cloudorig = np.where(tracknumbermap_cmask == itracknum)
-                # Index location of dilated cell mask
-                # idx_clouddilated = np.where(tracknumbermap == itracknum)
-                # Cell mask with liquid/ice phase
-                idx_liq = np.where((tracknumbermap_cmask == itracknum) & (phase == 1))
-                idx_ice = np.where((tracknumbermap_cmask == itracknum) & (phase == 2))
+                # idx_cloudorig = np.where(tracknumbermap_cmask == itracknum)
+                # idx_cloudorig = np.where(itrackcmask)
 
-                # Get location indices of the cloud
-                # icloudlocationy, icloudlocationx = np.where(tracknumbermap_cmask == itracknum)
-                # inpix_cloud = len(icloudlocationy)
+                # Cell mask with liquid/ice phase
+                itrackcmask_liq = (itrackcmask) & (phase == 1)
+                itrackcmask_ice = (itrackcmask) & (phase == 2)
+                # Count the number of liquid/ice pixels
+                inpix_liq = np.count_nonzero(itrackcmask_liq)
+                inpix_ice = np.count_nonzero(itrackcmask_ice)
 
                 # Proceed if the number matching cloud pixel > 0
                 if inpix_cloud > 0:
 
                     # Subset variables to the current cell mask (original)
-                    sub_ctt = ctt[idx_cloudorig]
-                    sub_tir = tir[idx_cloudorig]
-                    sub_cth = cth[idx_cloudorig]
-                    sub_ctp = ctp[idx_cloudorig]
-                    sub_phase = phase[idx_cloudorig]
+                    sub_ctt = ctt[itrackcmask]
+                    sub_tir = tir[itrackcmask]
+                    sub_cth = cth[itrackcmask]
+                    sub_ctp = ctp[itrackcmask]
+                    sub_phase = phase[itrackcmask]
 
                     # Subset variables to the current cell mask (dilated)
                     # sub_ctt = ctt[idx_clouddilated]
@@ -170,10 +176,10 @@ def calc_sat_cellstats_singlefile(
                     area_liq[imatchcloud] = np.count_nonzero(sub_phase == 1) * pixel_radius**2
                     area_ice[imatchcloud] = np.count_nonzero(sub_phase == 2) * pixel_radius**2
 
-                    if (len(idx_liq[0]) > 0):
-                        lwp_max[imatchcloud] = np.nanmax(lwp_iwp[idx_liq])
-                    if (len(idx_ice[0]) > 0):
-                        iwp_max[imatchcloud] = np.nanmax(lwp_iwp[idx_ice])
+                    if (inpix_liq > 0):
+                        lwp_max[imatchcloud] = np.nanmax(lwp_iwp[itrackcmask_liq])
+                    if (inpix_ice > 0):
+                        iwp_max[imatchcloud] = np.nanmax(lwp_iwp[itrackcmask_ice])
 
             # Group outputs in dictionaries
             out_dict = {
@@ -235,6 +241,9 @@ if __name__ == '__main__':
 
     # Get configuration file name from input
     config_file = sys.argv[1]
+    startdate = sys.argv[2]  # 'yyyymodd.hhmm'
+    enddate = sys.argv[3]    # 'yyyymodd.hhmm'
+
     # Read configuration from yaml file
     stream = open(config_file, 'r')
     config = yaml.full_load(stream)
@@ -242,12 +251,14 @@ if __name__ == '__main__':
     run_parallel = config['run_parallel']
     n_workers = config['n_workers']
     threads_per_worker = config['threads_per_worker']
-    startdate = config['startdate']
-    enddate = config['enddate']
+    # startdate = config['startdate']
+    # enddate = config['enddate']
     time_window = config['time_window']
     stats_path = config['stats_path']
     pixelfile_path = config['pixelfile_path']
     satfile_path = config['satfile_path']
+    # Add start/end dates to pixel path
+    pixelfile_path = f'{pixelfile_path}{startdate}_{enddate}/'
 
     output_path = stats_path
 
@@ -291,15 +302,16 @@ if __name__ == '__main__':
     # Read track statistics file
     print(trackstats_file)
     dsstats = xr.open_dataset(trackstats_file, decode_times=False)
-    ntracks = dsstats.dims[tracks_dimname]
-    ntimes = dsstats.dims[times_dimname]
+    ntracks = dsstats.sizes[tracks_dimname]
+    ntimes = dsstats.sizes[times_dimname]
+    tracks_coord = dsstats.coords[tracks_dimname]
+    times_coord = dsstats.coords[times_dimname]
     stats_basetime = dsstats['base_time']
     cell_area = dsstats['cell_area']
     pixel_radius = dsstats.attrs['pixel_radius_km']
     dsstats.close()
 
     print(f'Total Number of Tracks: {ntracks}')
-    
 
     ##############################################################
     # Call function to calculate statistics
@@ -323,11 +335,11 @@ if __name__ == '__main__':
                 timeindices_all.append(idx_time)
 
                 iresult = calc_sat_cellstats_singlefile(
-                            pixelfilelist[ifile], 
-                            match_satfilelist[ifile],
-                            idx_track, 
-                            pixel_radius
-                            )
+                    pixelfilelist[ifile], 
+                    match_satfilelist[ifile],
+                    idx_track, 
+                    pixel_radius
+                )
                 final_results.append(iresult)
                 # import pdb; pdb.set_trace()
 
@@ -354,11 +366,11 @@ if __name__ == '__main__':
                 timeindices_all.append(idx_time)
 
                 iresult = dask.delayed(calc_sat_cellstats_singlefile)(
-                            pixelfilelist[ifile], 
-                            match_satfilelist[ifile], 
-                            idx_track, 
-                            pixel_radius
-                            )
+                    pixelfilelist[ifile], 
+                    match_satfilelist[ifile], 
+                    idx_track, 
+                    pixel_radius
+                )
                 final_results.append(iresult)
             
         # Collect results from Dask
@@ -405,26 +417,28 @@ if __name__ == '__main__':
     # Write to netcdf
     print('Writing output netcdf ... ')
 
-    # Define variable list
-    varlist = {}
+    # Define variable dictionary
+    var_dict = {}
     # Define output variable dictionary
     for key, value in out_dict.items():
-        varlist[key] = ([tracks_dimname, times_dimname], value, out_dict_attrs[key])
-    # Define coordinate list
-    coordlist = {tracks_dimname: ([tracks_dimname], np.arange(0, ntracks)), \
-                 times_dimname: ([times_dimname], np.arange(0, ntimes)), \
-                }
+        var_dict[key] = ([tracks_dimname, times_dimname], value, out_dict_attrs[key])
+    # Define coordinate dictionary
+    coord_dict = {
+        tracks_dimname: ([tracks_dimname], tracks_coord.data, tracks_coord.attrs),
+        times_dimname: ([times_dimname], times_coord.data, times_coord.attrs),
+    }
     # Define global attributes
-    gattrlist = {'title':  'GOES16 cell track statistics', \
-                 'Institution': 'Pacific Northwest National Laboratoy', \
-                 'Contact': 'Zhe Feng, zhe.feng@pnnl.gov', \
-                 'Created_on':  time.ctime(time.time()), \
-                 'source_trackfile': trackstats_file, \
-                 'startdate': startdate, \
-                 'enddate': enddate, \
-                }
+    gattr_dict = {
+        'title':  'GOES16 cell track statistics',
+        'Institution': 'Pacific Northwest National Laboratoy',
+        'Contact': 'Zhe Feng, zhe.feng@pnnl.gov',
+        'Created_on':  time.ctime(time.time()),
+        'source_trackfile': trackstats_file,
+        'startdate': startdate,
+        'enddate': enddate,
+    }
     # Define xarray dataset
-    dsout = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
+    dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 
     # Add variables from cell track stats to the output
     dsout['base_time'] = stats_basetime
