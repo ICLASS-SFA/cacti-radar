@@ -17,8 +17,6 @@ if __name__ == '__main__':
 
     # startdate = config['startdate']
     # enddate = config['enddate']
-    # startdate = '20181129.1200'
-    # enddate = '20181130.0000'
     stats_path = config['stats_path']
     sonde_file = config['sonde_file']
 

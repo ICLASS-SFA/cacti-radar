@@ -18,9 +18,12 @@ if __name__ == "__main__":
     start_time = 12
 
     # Config file
-    config_file = './config_csapr_lasso.yaml'
+    # config_file = './config_csapr500m_lasso.yaml'
+    config_file = './config_csapr2500m_lasso.yaml'
+
     # Processing code name
     code_name = 'match_interpsonde_timeseries_celltracks.py'
+    # code_name = 'calc_sat_stats_to_celltracks.py'
 
     # Loop over each case date
     for ii, idate in enumerate(start_dates):

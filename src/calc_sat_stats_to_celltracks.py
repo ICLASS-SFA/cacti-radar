@@ -96,6 +96,9 @@ def calc_sat_cellstats_singlefile(
 
         # Read pixel-level track file
         ds = xr.open_dataset(pixel_filename, decode_times=False)
+        # cloudid_basetime = ds['base_time'].values
+        # tracknumbermap = ds['tracknumber'].squeeze().values
+        # tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze().values
         cmask = ds['conv_mask'].squeeze().values
         tracknumbermap = ds['tracknumber'].squeeze().values
         # Get cell tracknumber mask
@@ -247,8 +250,8 @@ if __name__ == '__main__':
     run_parallel = config['run_parallel']
     n_workers = config['n_workers']
     threads_per_worker = config['threads_per_worker']
-    startdate = config['startdate']
-    enddate = config['enddate']
+    # startdate = config['startdate']
+    # enddate = config['enddate']
     time_window = config['time_window']
     stats_path = config['stats_path']
     pixelfile_path = config['pixelfile_path']

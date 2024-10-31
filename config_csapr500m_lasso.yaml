@@ -18,7 +18,7 @@ pixelfile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_co
 # PPI 3D file directory
 ppifile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/'
 # Satellite pixel file directory
-satfile_path: ''
+satfile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/corvisstpx2drectg16v4minnisX1.parallaxcorrected_regrid2csapr2gridded.c1/'
 # Sounding stats file
 sonde_file: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1/stats/Interpsonde_parameters_CACTI_AMF_2Oct-30Apr_v3.1.1.nc'
 # Aerosol file
