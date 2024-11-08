@@ -99,13 +99,16 @@ def calc_sat_cellstats_singlefile(
         # cloudid_basetime = ds['base_time'].values
         # tracknumbermap = ds['tracknumber'].squeeze().values
         # tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze().values
-        cmask = ds['conv_mask'].squeeze().values
-        tracknumbermap = ds['tracknumber'].squeeze().values
+        # cmask = ds['conv_mask'].squeeze().values
+        # tracknumbermap = ds['tracknumber'].squeeze().values
         # Get cell tracknumber mask
         # Convert convective cell mask to binary, then multiply by tracknumber
-        tracknumbermap_cmask = (cmask > 0) * tracknumbermap
+        # tracknumbermap_cmask = (cmask > 0) * tracknumbermap
         # Replace background values with NaN
+        # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
+        tracknumbermap_cmask = ds['tracknumber'].squeeze().data * ds['conv_core'].squeeze().data
         tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
+        
         ds.close()
 
         # Create arrays for output statistics
@@ -250,8 +253,8 @@ if __name__ == '__main__':
     run_parallel = config['run_parallel']
     n_workers = config['n_workers']
     threads_per_worker = config['threads_per_worker']
-    # startdate = config['startdate']
-    # enddate = config['enddate']
+    startdate = config['startdate']
+    enddate = config['enddate']
     time_window = config['time_window']
     stats_path = config['stats_path']
     pixelfile_path = config['pixelfile_path']
