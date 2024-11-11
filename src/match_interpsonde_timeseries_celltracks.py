@@ -9,14 +9,14 @@ if __name__ == '__main__':
 
     # Get configuration file name from input
     config_file = sys.argv[1]
-    startdate = sys.argv[2]  # 'yyyymodd.hhmm'
-    enddate = sys.argv[3]    # 'yyyymodd.hhmm'
+    # startdate = sys.argv[2]  # 'yyyymodd.hhmm'
+    # enddate = sys.argv[3]    # 'yyyymodd.hhmm'
     # Read configuration from yaml file
     stream = open(config_file, 'r')
     config = yaml.full_load(stream)
 
-    # startdate = config['startdate']
-    # enddate = config['enddate']
+    startdate = config['startdate']
+    enddate = config['enddate']
     stats_path = config['stats_path']
     sonde_file = config['sonde_file']
 
@@ -26,7 +26,7 @@ if __name__ == '__main__':
     freq_min = 60
 
     # Maximum time difference allowed to match the datasets
-    time_window = 30  # [second]
+    time_window = 240  # [second]
     print(f'Max time window allowed to match the datasets: {time_window} s')
 
     # Input file basenames

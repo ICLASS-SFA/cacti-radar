@@ -110,10 +110,10 @@ def calc_3d_cellstats_singlefile(
         ds = ds.rename({'lat': 'y', 'lon': 'x'})
         # Read variables
         # cloudid_basetime = ds['basetime'].values
-        conv_core = ds['conv_core'].squeeze()
-        tmap = ds['tracknumber'].squeeze().data * conv_core.data
+        conv_mask = ds['conv_mask'].squeeze()
+        tmap = ds['tracknumber'].squeeze().data * conv_mask.data
         tmap[tmap <= 0] = np.NaN
-        tracknumbermap = xr.DataArray(tmap,coords = conv_core.coords, dims = conv_core.dims)
+        tracknumbermap = xr.DataArray(tmap,coords = conv_mask.coords, dims = conv_mask.dims)
         
         
         # tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze()
