@@ -1,24 +1,20 @@
 import os
 import glob, time
 import numpy as np
-# import matplotlib as mpl
-# import matplotlib.pyplot as plt
-# import matplotlib.dates as mdates
 import xarray as xr
-# import pandas as pd
-
 
 if __name__ == "__main__":
 
-    datadir = "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1/"
-    outdir = "/global/project/projectdirs/m1657/zfeng/cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1.new/stats/"
-    basename = "taranis_corcsapr2cfrppiqcM1_convmask.c1."
+    # datadir = "/global/cscratch1/sd/feng045/iclass/cacti/arm/csapr/taranis_corcsapr2cfrppiqcM1_gridded_convmask.c1/"
+    datadir = "/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1.v2/tracking/"
+    stats_path = "/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1.v2/stats/"
+    # basename = "taranis_corcsapr2cfrppiqcM1_convmask.c1."
+    basename = "cloudid_"
     outbasename = "csapr2_cellcounts_timeseries_"
 
-    outfilename = f"{outdir}{outbasename}20181015_20190303.nc"
+    outfilename = f"{stats_path}{outbasename}20181015_20190303.nc"
 
     # Find all files
-    # files = sorted(glob.glob(f"{datadir}{basename}*201901??.*.nc"))
     files = sorted(glob.glob(f"{datadir}{basename}*.nc"))
     nfiles = len(files)
     print(f"Number of files: {nfiles}")
@@ -26,15 +22,14 @@ if __name__ == "__main__":
     # Read data
     ds = xr.open_mfdataset(files, concat_dim='time', combine='nested')
     print(f"Finished reading data.")
-    nx = ds.sizes['x']
-    ny = ds.sizes['y']
+    # nx = ds.sizes['x']
+    # ny = ds.sizes['y']
+    nx = ds.sizes['lon']
+    ny = ds.sizes['lat']
     ntimes = ds.sizes['time']
     dx = ds.attrs['dx'] / 1000
     dy = ds.attrs['dy'] / 1000
-
-    conv_mask = ds.conv_mask.values
-    # cell_num, cell_npix = np.unique(conv_mask.sel(time='2019-01-25T18:00').values.reshape((1,nx*ny)), return_counts=True, axis=1)
-    # cell_num, cell_npix = np.unique(conv_mask.values.reshape((ntimes,nx*ny)), return_counts=True, axis=1)
+    conv_mask = ds['conv_mask'].values
 
     nmaxcell = 200
     ncells_all = np.full(ntimes, np.NaN, dtype=int)
@@ -54,19 +49,26 @@ if __name__ == "__main__":
     # Multiply pixel size to get cell area
     cell_area = cell_area * dx * dy
 
-    # Define xarray dataset for Map
+    # Define xarray dataset
     print(f'Writing output ...')
-    varlist = {'cell_count': (['time'], ncells_all), \
-               'cell_area': (['time', 'cell'], cell_area), \
-              }
-    coordlist = {'time': (['time'], ds.time), \
-                 'cell': (['cell'], np.arange(0, nmaxcell)), \
-                }
-    attrlist = {'title': 'CSAPR2 convective cell counts time series', \
-                'contact':'Zhe Feng, zhe.feng@pnnl.gov', \
-                'created_on':time.ctime(time.time())}    
-
-    dsout = xr.Dataset(varlist, coords=coordlist, attrs=attrlist)
+    # Define output variable dictionary
+    var_dict = {
+        'cell_count': (['time'], ncells_all), \
+        'cell_area': (['time', 'cell'], cell_area), \
+    }
+    # Define coordinate dictionary
+    coord_dict = {
+        'time': (['time'], ds.time.data), \
+        'cell': (['cell'], np.arange(0, nmaxcell)), \
+    }
+    # Define global attributes
+    gattr_dict = {
+        'title': 'CSAPR2 convective cell counts time series', \
+        'contact':'Zhe Feng, zhe.feng@pnnl.gov', \
+        'created_on':time.ctime(time.time()),
+    }
+    # Define xarray DataSet
+    dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 
     dsout['cell'].attrs['long_name'] = 'Cell number'
     dsout['cell'].attrs['units'] = 'unitless'
@@ -85,5 +87,3 @@ if __name__ == "__main__":
     dsout.to_netcdf(path=outfilename, mode='w', format='NETCDF4', 
                     unlimited_dims='time', encoding=encoding)
     print('Output saved as: ', outfilename)
-
-    import pdb; pdb.set_trace()

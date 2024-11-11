@@ -86,7 +86,7 @@ def calc_3d_cellstats_singlefile(
 
         # Read 3D PPI file
         dsv = xr.open_dataset(ppi_filename)
-        zdim = dsv.dims['z']
+        zdim = dsv.sizes['z']
         height = dsv['z'].values
         dbz = dsv['taranis_attenuation_corrected_reflectivity'].squeeze()
         zdr = dsv['taranis_attenuation_corrected_differential_reflectivity'].squeeze()
@@ -94,21 +94,25 @@ def calc_3d_cellstats_singlefile(
         rainrate = dsv['taranis_rain_rate'].squeeze()
         Dm = dsv['taranis_Dm'].squeeze()
         lwc = dsv['lwc_combined'].squeeze()
-        # hid = dsv['hydrometeor_identification_post_grid'].squeeze()
         # dsv.close()
-        # import pdb; pdb.set_trace()
 
         # Read pixel-level track file
         ds = xr.open_dataset(pixel_filename, decode_times=False)
         # Replace lon/lat coordinates with x/y
         ds['lon'] = dsv['x'].values
         ds['lat'] = dsv['y'].values
-        ds = ds.rename({'lat':'y', 'lon':'x'})
+        # Drop original variables (x, y), then rename lat/lon to x/y
+        ds = ds.drop_vars(['x', 'y']).rename({'lat':'y', 'lon':'x'})
+        # ds = ds.rename({'lat':'y', 'lon':'x'})
         # Read variables
-        # cloudid_basetime = ds['basetime'].values
+        cmask = ds['conv_mask'].squeeze()
         tracknumbermap = ds['tracknumber'].squeeze()
-        tracknumbermap_cmask = ds['tracknumber_cmask'].squeeze()
-        # ds.close()
+        # Get cell tracknumber mask
+        # Convert convective cell mask to binary, then multiply by tracknumber
+        tracknumbermap_cmask = (cmask > 0) * tracknumbermap
+        # Replace background values with NaN
+        tracknumbermap_cmask = tracknumbermap_cmask.where(tracknumbermap_cmask > 0, other=np.NaN)
+        ds.close()
 
         # Create arrays for output statistics
         nmatchcloud = len(idx_track)
@@ -161,44 +165,6 @@ def calc_3d_cellstats_singlefile(
                     sub_Dm = Dm.where(tracknumbermap == itracknum, drop=True).values
                     sub_lwc = lwc.where(tracknumbermap == itracknum, drop=True).values
                     # sub_hid = hid.where(tracknumbermap == itracknum, drop=True).values
-
-                    # # Fill array with data
-                    # import pdb; pdb.set_trace()
-                    # filtered_dbz[:,icloudlocationy, icloudlocationx] = np.copy(dbz[:,icloudlocationy,icloudlocationx])
-                    # filtered_zdr[:,icloudlocationy, icloudlocationx] = np.copy(zdr[:,icloudlocationy,icloudlocationx])
-                    # filtered_kdp[:,icloudlocationy, icloudlocationx] = np.copy(kdp[:,icloudlocationy,icloudlocationx])
-                    # filtered_rainrate[:,icloudlocationy, icloudlocationx] = np.copy(rainrate[:,icloudlocationy,icloudlocationx])
-                    # filtered_Dm[:,icloudlocationy, icloudlocationx] = np.copy(Dm[:,icloudlocationy,icloudlocationx])
-                    # filtered_lwc[:,icloudlocationy, icloudlocationx] = np.copy(lwc[:,icloudlocationy,icloudlocationx])
-                    # filtered_hid[:,icloudlocationy, icloudlocationx] = np.copy(hid[:,icloudlocationy,icloudlocationx])
-
-                    # # Set edges of boundary
-                    # miny = np.nanmin(icloudlocationy)
-                    # if miny <= 10:
-                    #     miny = 0
-                    # else:
-                    #     miny = miny - 10
-
-                    # maxy = np.nanmax(icloudlocationy)
-                    # if maxy >= ydim - 10:
-                    #     maxy = ydim
-                    # else:
-                    #     maxy = maxy + 11
-
-                    # minx = np.nanmin(icloudlocationx)
-                    # if minx <= 10:
-                    #     minx = 0
-                    # else:
-                    #     minx = minx - 10
-
-                    # maxx = np.nanmax(icloudlocationx)
-                    # if maxx >= xdim - 10:
-                    #     maxx = xdim
-                    # else:
-                    #     maxx = maxx + 11
-
-                    # # Isolate smaller region around cloud, this should speed up calculations
-                    # sub_dbz = np.copy(filtered_dbz[:, miny:maxy, minx:maxx])
                     
                     cell_area[imatchcloud] = inpix_cloud * pixel_radius**2
                     
@@ -364,7 +330,7 @@ if __name__ == '__main__':
 
     # Find matching satellite files for each pixel file
     match_ppifilelist = [''] * nfiles
-    match_ppibasetime = np.full(nfiles, np.NaN, dtype=np.float)
+    match_ppibasetime = np.full(nfiles, np.NaN, dtype=np.float64)
     for ifile in range(nfiles):
         # Find PPI time closest to the pixel file time and get the index
         # Save the filename if time difference is < time_window
@@ -379,8 +345,10 @@ if __name__ == '__main__':
     # Read track statistics file
     print(trackstats_file)
     dsstats = xr.open_dataset(trackstats_file, decode_times=False)
-    ntracks = dsstats.dims[tracks_dimname]
-    ntimes = dsstats.dims[times_dimname]
+    ntracks = dsstats.sizes[tracks_dimname]
+    ntimes = dsstats.sizes[times_dimname]
+    tracks_coord = dsstats.coords[tracks_dimname]
+    times_coord = dsstats.coords[times_dimname]
     stats_basetime = dsstats['base_time']
     # basetime_units = dsstats['base_time'].units
     cell_area = dsstats['cell_area'].values
@@ -391,8 +359,8 @@ if __name__ == '__main__':
 
     # Read a PPI file to get vertical coordinates
     dsv = xr.open_dataset(match_ppifilelist[0])
-    zdim = dsv.dims['z']
-    height = dsv['z']
+    zdim = dsv.sizes['z']
+    height_coord = dsv['z']
     dsv.close()
 
 
@@ -476,7 +444,6 @@ if __name__ == '__main__':
         else:
             out_dict[ivar] = np.full((ntracks, ntimes, zdim), np.nan, dtype=np.float32)
         out_dict_attrs[ivar] = var_attrs[ivar]
-    # import pdb; pdb.set_trace()
 
     # The number of returned results
     nresults = len(final_results)
@@ -509,31 +476,31 @@ if __name__ == '__main__':
     print('Writing output netcdf ... ')
     t0_write = time.time()
 
-    # Define variable list
-    varlist = {}
     # Define output variable dictionary
+    var_dict = {}
     for key, value in out_dict.items():
         if value.ndim == 2:
-            varlist[key] = ([tracks_dimname, times_dimname], value, out_dict_attrs[key])
+            var_dict[key] = ([tracks_dimname, times_dimname], value, out_dict_attrs[key])
         if value.ndim == 3:
-            varlist[key] = ([tracks_dimname, times_dimname, z_dimname], value, out_dict_attrs[key])
-    # Define coordinate list
-    coordlist = {
-        tracks_dimname: ([tracks_dimname], np.arange(0, ntracks)),
-        times_dimname: ([times_dimname], np.arange(0, ntimes)),
-        z_dimname: ([z_dimname], height, height.attrs),
+            var_dict[key] = ([tracks_dimname, times_dimname, z_dimname], value, out_dict_attrs[key])
+    # Define coordinate dictionary
+    coord_dict = {
+        tracks_dimname: ([tracks_dimname], tracks_coord.data, tracks_coord.attrs),
+        times_dimname: ([times_dimname], times_coord.data, times_coord.attrs),
+        z_dimname: ([z_dimname], height_coord.data, height_coord.attrs),
     }
     # Define global attributes
-    gattrlist = {'title':  'Track 3D statistics', \
-                 'Institution': 'Pacific Northwest National Laboratoy', \
-                 'Contact': 'Zhe Feng, zhe.feng@pnnl.gov', \
-                 'Created_on':  time.ctime(time.time()), \
-                 'source_trackfile': trackstats_file, \
-                 'startdate': startdate, \
-                 'enddate': enddate, \
-                }
+    gattr_dict = {
+        'title':  'Track 3D statistics', \
+        'Institution': 'Pacific Northwest National Laboratoy', \
+        'Contact': 'Zhe Feng, zhe.feng@pnnl.gov', \
+        'Created_on':  time.ctime(time.time()), \
+        'source_trackfile': trackstats_file, \
+        'startdate': startdate, \
+        'enddate': enddate, \
+    }
     # Define xarray dataset
-    dsout = xr.Dataset(varlist, coords=coordlist, attrs=gattrlist)
+    dsout = xr.Dataset(var_dict, coords=coord_dict, attrs=gattr_dict)
 
     # Add variables from cell track stats to the output
     dsout['base_time'] = stats_basetime

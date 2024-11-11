@@ -18,8 +18,8 @@ if __name__ == "__main__":
     start_time = 12
 
     # Config file
-    # config_file = './config_csapr500m_lasso.yaml'
-    config_file = './config_csapr2500m_lasso.yaml'
+    config_file = './config_csapr500m_lasso.yaml'
+    # config_file = './config_csapr2500m_lasso.yaml'
 
     # Processing code name
     code_name = 'match_interpsonde_timeseries_celltracks.py'
