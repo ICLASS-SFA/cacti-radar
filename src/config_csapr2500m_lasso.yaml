@@ -1,0 +1,26 @@
+---
+# Run in parallel
+run_parallel: 0
+# Number of workers for Dask
+n_workers: 32
+# Threads per worker
+threads_per_worker: 1
+# Start/end date/time
+startdate: '20181015.0000'
+enddate: '20190303.0000'
+# Maximum time difference allowed to match the datasets
+time_window: 300  # [second]
+# Input/output file locations
+# Track stats directory
+stats_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqc2500mM1_celltracking.c1/stats/'
+# Track pixel file directory
+pixelfile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqc2500mM1_celltracking.c1/celltracking/'
+# PPI 3D file directory
+ppifile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqc2500mM1_gridded.c1/'
+# Satellite pixel file directory
+satfile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/corvisstpx2drectg16v4minnisX1.parallaxcorrected_regrid2csapr2gridded2500m.c1/'
+# Sounding stats file
+# sonde_file: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1/stats/Interpsonde_parameters_CACTI_AMF_2Oct-30Apr_v3.1.1.nc'
+sonde_file: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_celltracking.c1/stats/Interpsonde_parameters_CACTI_AMF_2Oct-30Apr_v5.3.nc'
+# Aerosol file
+aerosol_file: ''
