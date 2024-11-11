@@ -106,7 +106,7 @@ def calc_sat_cellstats_singlefile(
         # tracknumbermap_cmask = (cmask > 0) * tracknumbermap
         # Replace background values with NaN
         # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
-        tracknumbermap_cmask = ds['tracknumber'].squeeze().data * ds['conv_core'].squeeze().data
+        tracknumbermap_cmask = ds['tracknumber'].squeeze().data * ds['conv_mask'].squeeze().data
         tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
         
         ds.close()

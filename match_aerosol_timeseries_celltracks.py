@@ -26,7 +26,7 @@ if __name__ == '__main__':
     freq_min = 60
 
     # Maximum time difference allowed to match the datasets
-    time_window = 30  # [second]
+    time_window = 240  # [second]
     print(f'Max time window allowed to match the datasets: {time_window} s')
 
     # Input file basenames
