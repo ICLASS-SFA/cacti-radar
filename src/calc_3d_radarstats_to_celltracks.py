@@ -11,6 +11,7 @@ import xarray as xr
 import warnings
 import dask
 from dask.distributed import Client, LocalCluster
+from scipy.stats import mode
 
 #########################################################
 def calc_basetime(filelist, filebase):
@@ -93,7 +94,8 @@ def calc_3d_cellstats_singlefile(
         kdp = dsv['kdp_pos_lp_reg'].squeeze()
         rainrate = dsv['taranis_rain_rate'].squeeze()
         Dm = dsv['taranis_Dm'].squeeze()
-        lwc = dsv['lwc_combined'].squeeze()
+        rwc = dsv['lwc_combined'].squeeze()
+        hid = dsv['hydrometeor_identification_post_grid'].squeeze()
         # dsv.close()
 
         # Read pixel-level track file
@@ -129,8 +131,30 @@ def calc_3d_cellstats_singlefile(
         max_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
-        max_lwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        max_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         volrain = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        mode_hid = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_01 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_02 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_03 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_04 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_05 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_06 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_07 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_08 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_09 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        hid_10 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        numdbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        numrwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        
+        pct = [0,10,25,50,75,90] # Percentiles to calculate
+        pdim = len(pct)
+        pct_dbz = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
+        pct_zdr = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
+        pct_kdp = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
+        pct_rainrate = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
+        pct_Dm = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
+        pct_rwc = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
 
         if (nmatchcloud > 0):
             
@@ -163,8 +187,8 @@ def calc_3d_cellstats_singlefile(
                     sub_kdp = kdp.where(tracknumbermap == itracknum, drop=True).values
                     sub_rainrate = rainrate.where(tracknumbermap == itracknum, drop=True).values
                     sub_Dm = Dm.where(tracknumbermap == itracknum, drop=True).values
-                    sub_lwc = lwc.where(tracknumbermap == itracknum, drop=True).values
-                    # sub_hid = hid.where(tracknumbermap == itracknum, drop=True).values
+                    sub_rwc = rwc.where(tracknumbermap == itracknum, drop=True).values
+                    sub_hid = hid.where(tracknumbermap == itracknum, drop=True).values
                     
                     cell_area[imatchcloud] = inpix_cloud * pixel_radius**2
                     
@@ -177,7 +201,27 @@ def calc_3d_cellstats_singlefile(
                         max_kdp[imatchcloud,:] = np.nanmax(sub_kdp, axis=(1,2))
                         max_rainrate[imatchcloud,:] = np.nanmax(sub_rainrate, axis=(1,2))
                         max_Dm[imatchcloud,:] = np.nanmax(sub_Dm, axis=(1,2))
-                        max_lwc[imatchcloud,:] = np.nanmax(sub_lwc, axis=(1,2))
+                        max_rwc[imatchcloud,:] = np.nanmax(sub_rwc, axis=(1,2))
+                        
+                        pct_dbz[imatchcloud,:,:] = np.nanpercentile(sub_dbz, pct, axis=(1,2)).T
+                        pct_zdr[imatchcloud,:,:] = np.nanpercentile(sub_zdr, pct, axis=(1,2)).T
+                        pct_kdp[imatchcloud,:,:] = np.nanpercentile(sub_kdp, pct, axis=(1,2)).T
+                        pct_rainrate[imatchcloud,:,:] = np.nanpercentile(sub_rainrate, pct, axis=(1,2)).T
+                        pct_Dm[imatchcloud,:,:] = np.nanpercentile(sub_Dm, pct, axis=(1,2)).T
+                        pct_rwc[imatchcloud,:,:] = np.nanpercentile(sub_rwc, pct, axis=(1,2)).T
+                        mode_hid[imatchcloud,:],_ = mode(sub_hid,axis=(1,2),nan_policy='omit')
+                        hid_01[imatchcloud,:] = np.count_nonzero(sub_hid == 1, axis=(1,2))
+                        hid_02[imatchcloud,:] = np.count_nonzero(sub_hid == 2, axis=(1,2))
+                        hid_03[imatchcloud,:] = np.count_nonzero(sub_hid == 3, axis=(1,2))
+                        hid_04[imatchcloud,:] = np.count_nonzero(sub_hid == 4, axis=(1,2))
+                        hid_05[imatchcloud,:] = np.count_nonzero(sub_hid == 5, axis=(1,2))
+                        hid_06[imatchcloud,:] = np.count_nonzero(sub_hid == 6, axis=(1,2))
+                        hid_07[imatchcloud,:] = np.count_nonzero(sub_hid == 7, axis=(1,2))
+                        hid_08[imatchcloud,:] = np.count_nonzero(sub_hid == 8, axis=(1,2))
+                        hid_09[imatchcloud,:] = np.count_nonzero(sub_hid == 9, axis=(1,2))
+                        hid_10[imatchcloud,:] = np.count_nonzero(sub_hid == 10, axis=(1,2))
+                        numdbz[imatchcloud,:] = np.count_nonzero(abs(sub_dbz)>0, axis=(1,2))
+                        numrwc[imatchcloud,:] = np.count_nonzero(sub_rwc>0, axis=(1,2))
 
                     # Count number of pixels > X dBZ at each level
                     npix_dbz0[imatchcloud,:] = np.count_nonzero(sub_dbz > 0, axis=(1,2))
@@ -200,6 +244,7 @@ def calc_3d_cellstats_singlefile(
             out_dict = {
                 # nmatchcloud, 
                 "cell_area": cell_area,
+                "p50_reflectivity": pct_dbz[:,:,3],
                 "max_reflectivity": max_dbz,
                 "npix_dbz0": npix_dbz0,
                 "npix_dbz10": npix_dbz10,
@@ -208,17 +253,49 @@ def calc_3d_cellstats_singlefile(
                 "npix_dbz40": npix_dbz40,
                 "npix_dbz50": npix_dbz50,
                 "npix_dbz60": npix_dbz60,
+                "min_zdr": pct_zdr[:,:,0],
+                "p10_zdr": pct_zdr[:,:,1],
+                "p25_zdr": pct_zdr[:,:,2],
+                "p50_zdr": pct_zdr[:,:,3],
+                "p75_zdr": pct_zdr[:,:,4],
+                "p90_zdr": pct_zdr[:,:,5],
                 "max_zdr": max_zdr,
+                "min_kdp": pct_kdp[:,:,0],
+                "p10_kdp": pct_kdp[:,:,1],
+                "p25_kdp": pct_kdp[:,:,2],
+                "p50_kdp": pct_kdp[:,:,3],
+                "p75_kdp": pct_kdp[:,:,4],
+                "p90_kdp": pct_kdp[:,:,5],
                 "max_kdp": max_kdp,
+                "p50_rainrate": pct_rainrate[:,:,3],
                 "max_rainrate": max_rainrate,
+                "p50_Dm": pct_Dm[:,:,3],
                 "max_Dm": max_Dm,
-                "max_lwc": max_lwc,
+                "p50_rwc": pct_rwc[:,:,3],
+                "max_rwc": max_rwc,
                 "volrain": volrain,
+                "species": mode_hid,
+                "drizzle": hid_01,
+                "rain": hid_02,
+                "ice_crystals": hid_03,
+                "aggregates": hid_04,
+                "wet_snow": hid_05,
+                "vertical_ice": hid_06,
+                "low_density_graupel": hid_07,
+                "high_density_graupel": hid_08,
+                "hail": hid_09,
+                "big_drops": hid_10,
+                "num_dbz": numdbz,
+                "num_rwc": numrwc,
             }
             out_dict_attrs = {
                 "cell_area": {
                     "long_name": "Area of the convective cell in a track",
                     "units": "km^2",
+                }, 
+                'p50_reflectivity': {
+                    "long_name": '50th pct reflectivity profile in a track',
+                    "units": "dBZ",
                 }, 
                 'max_reflectivity': {
                     "long_name": 'Maximum reflectivity profile in a track',
@@ -252,30 +329,141 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "Number of pixel greater than 60 dBZ profile in a track",
                     "units": "counts",
                 },
-
+                'min_zdr': {
+                    "long_name": "Minimum ZDR profile in a track",
+                    "units": "dB",
+                },
+                'p10_zdr': {
+                    "long_name": "10th pct ZDR profile in a track",
+                    "units": "dB",
+                },
+                'p25_zdr': {
+                    "long_name": "25th pct ZDR profile in a track",
+                    "units": "dB",
+                },
+                'p50_zdr': {
+                    "long_name": "50th pct ZDR profile in a track",
+                    "units": "dB",
+                },
+                'p75_zdr': {
+                    "long_name": "75th pct ZDR profile in a track",
+                    "units": "dB",
+                },
+                'p90_zdr': {
+                    "long_name": "90th pct ZDR profile in a track",
+                    "units": "dB",
+                },
                 'max_zdr': {
                     "long_name": "Maximum ZDR profile in a track",
                     "units": "dB",
+                },
+                'min_kdp': {
+                    "long_name": "Minimum KDP profile in a track",
+                    "units": "degrees/km",
+                },
+                'p10_kdp': {
+                    "long_name": "10th pct KDP profile in a track",
+                    "units": "degrees/km",
+                },
+                'p25_kdp': {
+                    "long_name": "25th pct KDP profile in a track",
+                    "units": "degrees/km",
+                },
+                'p50_kdp': {
+                    "long_name": "50th pct KDP profile in a track",
+                    "units": "degrees/km",
+                },
+                'p75_kdp': {
+                    "long_name": "75th pct KDP profile in a track",
+                    "units": "degrees/km",
+                },
+                'p90_kdp': {
+                    "long_name": "90th pct KDP profile in a track",
+                    "units": "degrees/km",
                 },
                 'max_kdp': {
                     "long_name": "Maximum KDP profile in a track",
                     "units": "degrees/km",
                 },
+                'p50_rainrate': {
+                    "long_name": "50th pct rain rate profile in a track",
+                    "units": "mm/hr",
+                },
                 'max_rainrate': {
                     "long_name": "Maximum rain rate profile in a track",
                     "units": "mm/hr",
+                },
+                'p50_Dm': {
+                    "long_name": "50th pct mass weighted mean diameter profile in a track",
+                    "units": "mm",
                 },
                 'max_Dm': {
                     "long_name": "Maximum mass weighted mean diameter profile in a track",
                     "units": "mm",
                 },
-                'max_lwc': {
+                'p50_rwc': {
+                    "long_name": "50th pct rain water content profile in a track",
+                    "units": "g/m^3",
+                },
+                'max_rwc': {
                     "long_name": "Maximum liquid water content profile in a track",
                     "units": "g/m^3",
                 },
                 'volrain': {
                     "long_name": "Volumetric rainfall profile in a track",
                     "units": "m^3/h^1",
+                },
+                'species': {
+                    "long_name": "Predominant hydrometeor class",
+                    "units": "Drizzle (1), Rain (2), Ice Crystals (3), Aggregates (4), Wet Snow (5), Vertical Ice (6), Low Density Graupel (7), High Density Graupel (8), Hail (9), Big Drops (10)",
+                },
+                'drizzle': {
+                    "long_name": "Number of pixels corresponding to drizzle in a cell",
+                    "units": "counts",
+                },
+                'rain': {
+                    "long_name": "Number of pixels corresponding to rain in a cell",
+                    "units": "counts",
+                },
+                'ice_crystals': {
+                    "long_name": "Number of pixels corresponding to ice crystals in a cell",
+                    "units": "counts",
+                },
+                'aggregates': {
+                    "long_name": "Number of pixels corresponding to aggregates in a cell",
+                    "units": "counts",
+                },
+                'wet_snow': {
+                    "long_name": "Number of pixels corresponding to wet snow in a cell",
+                    "units": "counts",
+                },
+                'vertical_ice': {
+                    "long_name": "Number of pixels corresponding to vertical ice in a cell",
+                    "units": "counts",
+                },
+                'low_density_graupel': {
+                    "long_name": "Number of pixels corresponding to low density graupel in a cell",
+                    "units": "counts",
+                },
+                'high_density_graupel': {
+                    "long_name": "Number of pixels corresponding to high density graupel in a cell",
+                    "units": "counts",
+                },
+                'hail': {
+                    "long_name": "Number of pixels corresponding to hail in a cell",
+                    "units": "counts",
+                },
+                'big_drops': {
+                    "long_name": "Number of pixels corresponding to big drops in a cell",
+                    "units": "counts",
+                },
+                'num_dbz': {
+                    "long_name": "Number of pixels in dBZ field containing non-zero values",
+                    "units": "counts",
+                },
+                'num_rwc': {
+                    "long_name": "Number of pixels in rwc field containing non-zero values",
+                    "units": "counts",
                 },
             }
             return out_dict, out_dict_attrs
@@ -372,6 +560,7 @@ if __name__ == '__main__':
     if run_parallel==0:
         # Loop over each pixel-file and call function to calculate
         for ifile in range(nfiles):
+#         for ifile in range(147,149):
             # Find all matching time indices from track stats file to the current pixel file
             matchindices = np.array(
                 np.where(np.abs(stats_basetime.values - pixel_basetime[ifile]) < time_window)
@@ -475,7 +664,8 @@ if __name__ == '__main__':
     # Write to netcdf
     print('Writing output netcdf ... ')
     t0_write = time.time()
-
+    
+    import pdb;pdb.set_trace()
     # Define output variable dictionary
     var_dict = {}
     for key, value in out_dict.items():

@@ -1,6 +1,6 @@
 ---
 # Run in parallel
-run_parallel: 0
+run_parallel: 1
 # Number of workers for Dask
 n_workers: 32
 # Threads per worker
@@ -34,5 +34,5 @@ aerosol_file: '/gpfs/wolf2/arm/atm131/proj-shared/enochjo/cacti/CACTI_Aerosol_Co
 # python match_interpsonde_timeseries_celltracks.py config_enochjo.yaml
 # python match_aerosol_timeseries_celltracks.py config_enochjo.yaml
 # python calc_sat_stats_to_celltracks.py config_enochjo.yaml
-# python calc_3d_radarstats_to_celltracks_enochjo.py config_enochjo.yaml
+# python calc_3d_radarstats_to_celltracks.py config_enochjo.yaml
 
