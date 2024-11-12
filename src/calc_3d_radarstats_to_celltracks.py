@@ -120,6 +120,7 @@ def calc_3d_cellstats_singlefile(
         nmatchcloud = len(idx_track)
         cell_area = np.full((nmatchcloud), np.nan, dtype=np.float32)
         max_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p50_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz0 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz10 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz20 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
@@ -127,10 +128,25 @@ def calc_3d_cellstats_singlefile(
         npix_dbz40 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz50 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz60 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        min_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p10_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p25_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p50_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p75_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p90_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        min_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p10_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p25_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p50_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p75_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p90_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p50_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p50_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p50_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         volrain = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         mode_hid = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
@@ -146,15 +162,6 @@ def calc_3d_cellstats_singlefile(
         hid_10 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         numdbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         numrwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
-        
-        pct = [0,10,25,50,75,90] # Percentiles to calculate
-        pdim = len(pct)
-        pct_dbz = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
-        pct_zdr = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
-        pct_kdp = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
-        pct_rainrate = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
-        pct_Dm = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
-        pct_rwc = np.full((nmatchcloud, zdim, pdim), np.nan, dtype=np.float32)
 
         if (nmatchcloud > 0):
             
@@ -196,19 +203,28 @@ def calc_3d_cellstats_singlefile(
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore", category=RuntimeWarning)
                         # Max profile
+                        p50_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 50, axis=(1,2)).T
                         max_dbz[imatchcloud,:] = np.nanmax(sub_dbz, axis=(1,2))
+                        min_zdr[imatchcloud,:] = np.nanmin(sub_zdr, axis=(1,2)).T
+                        p10_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 10, axis=(1,2)).T
+                        p25_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 25, axis=(1,2)).T
+                        p50_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 50, axis=(1,2)).T
+                        p75_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 75, axis=(1,2)).T
+                        p90_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 90, axis=(1,2)).T
                         max_zdr[imatchcloud,:] = np.nanmax(sub_zdr, axis=(1,2))
+                        min_kdp[imatchcloud,:] = np.nanmin(sub_kdp, axis=(1,2)).T
+                        p10_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 10, axis=(1,2)).T
+                        p25_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 25, axis=(1,2)).T
+                        p50_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 50, axis=(1,2)).T
+                        p75_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 75, axis=(1,2)).T
+                        p90_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 90, axis=(1,2)).T
                         max_kdp[imatchcloud,:] = np.nanmax(sub_kdp, axis=(1,2))
+                        p50_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 50, axis=(1,2)).T
                         max_rainrate[imatchcloud,:] = np.nanmax(sub_rainrate, axis=(1,2))
+                        p50_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 50, axis=(1,2)).T
                         max_Dm[imatchcloud,:] = np.nanmax(sub_Dm, axis=(1,2))
+                        p50_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 50, axis=(1,2)).T
                         max_rwc[imatchcloud,:] = np.nanmax(sub_rwc, axis=(1,2))
-                        
-                        pct_dbz[imatchcloud,:,:] = np.nanpercentile(sub_dbz, pct, axis=(1,2)).T
-                        pct_zdr[imatchcloud,:,:] = np.nanpercentile(sub_zdr, pct, axis=(1,2)).T
-                        pct_kdp[imatchcloud,:,:] = np.nanpercentile(sub_kdp, pct, axis=(1,2)).T
-                        pct_rainrate[imatchcloud,:,:] = np.nanpercentile(sub_rainrate, pct, axis=(1,2)).T
-                        pct_Dm[imatchcloud,:,:] = np.nanpercentile(sub_Dm, pct, axis=(1,2)).T
-                        pct_rwc[imatchcloud,:,:] = np.nanpercentile(sub_rwc, pct, axis=(1,2)).T
                         mode_hid[imatchcloud,:],_ = mode(sub_hid,axis=(1,2),nan_policy='omit')
                         hid_01[imatchcloud,:] = np.count_nonzero(sub_hid == 1, axis=(1,2))
                         hid_02[imatchcloud,:] = np.count_nonzero(sub_hid == 2, axis=(1,2))
@@ -244,7 +260,7 @@ def calc_3d_cellstats_singlefile(
             out_dict = {
                 # nmatchcloud, 
                 "cell_area": cell_area,
-                "p50_reflectivity": pct_dbz[:,:,3],
+                "p50_reflectivity": p50_dbz,
                 "max_reflectivity": max_dbz,
                 "npix_dbz0": npix_dbz0,
                 "npix_dbz10": npix_dbz10,
@@ -253,25 +269,25 @@ def calc_3d_cellstats_singlefile(
                 "npix_dbz40": npix_dbz40,
                 "npix_dbz50": npix_dbz50,
                 "npix_dbz60": npix_dbz60,
-                "min_zdr": pct_zdr[:,:,0],
-                "p10_zdr": pct_zdr[:,:,1],
-                "p25_zdr": pct_zdr[:,:,2],
-                "p50_zdr": pct_zdr[:,:,3],
-                "p75_zdr": pct_zdr[:,:,4],
-                "p90_zdr": pct_zdr[:,:,5],
+                "min_zdr": min_zdr,
+                "p10_zdr": p10_zdr,
+                "p25_zdr": p25_zdr,
+                "p50_zdr": p50_zdr,
+                "p75_zdr": p75_zdr,
+                "p90_zdr": p90_zdr,
                 "max_zdr": max_zdr,
-                "min_kdp": pct_kdp[:,:,0],
-                "p10_kdp": pct_kdp[:,:,1],
-                "p25_kdp": pct_kdp[:,:,2],
-                "p50_kdp": pct_kdp[:,:,3],
-                "p75_kdp": pct_kdp[:,:,4],
-                "p90_kdp": pct_kdp[:,:,5],
+                "min_kdp": min_kdp,
+                "p10_kdp": p10_kdp,
+                "p25_kdp": p25_kdp,
+                "p50_kdp": p50_kdp,
+                "p75_kdp": p75_kdp,
+                "p90_kdp": p90_kdp,
                 "max_kdp": max_kdp,
-                "p50_rainrate": pct_rainrate[:,:,3],
+                "p50_rainrate": p50_rainrate,
                 "max_rainrate": max_rainrate,
-                "p50_Dm": pct_Dm[:,:,3],
+                "p50_Dm": p50_Dm,
                 "max_Dm": max_Dm,
-                "p50_rwc": pct_rwc[:,:,3],
+                "p50_rwc": p50_rwc,
                 "max_rwc": max_rwc,
                 "volrain": volrain,
                 "species": mode_hid,
@@ -665,7 +681,6 @@ if __name__ == '__main__':
     print('Writing output netcdf ... ')
     t0_write = time.time()
     
-    import pdb;pdb.set_trace()
     # Define output variable dictionary
     var_dict = {}
     for key, value in out_dict.items():
