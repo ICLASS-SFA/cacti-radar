@@ -4,6 +4,7 @@ import yaml
 import time
 import xarray as xr
 import pandas as pd
+import pdb
 
 if __name__ == '__main__':
 
@@ -21,14 +22,16 @@ if __name__ == '__main__':
     # enddate = '20181130.0000'
     stats_path = config['stats_path']
     sonde_file = config['sonde_file']
+    aerosol_file = config['aerosol_file']
 
     # Number of relative hours prior to track start to make time series
     nhours = 3
     # Frequency of time series in minutes
-    freq_min = 60
+    freq_min = 15
 
     # Maximum time difference allowed to match the datasets
     time_window = 30  # [second]
+    # time_window = np.timedelta64(time_window, 's') # EJ
     print(f'Max time window allowed to match the datasets: {time_window} s')
 
     # Input file basenames
@@ -36,7 +39,7 @@ if __name__ == '__main__':
 
     # Output statistics filename
     output_path = stats_path
-    output_filename = f'{output_path}interpsonde_parameters_celltrack_{startdate}_{enddate}.nc'
+    output_filename = f'{output_path}aerosol_parameters_celltrack_{startdate}_{enddate}.nc'
 
     # Track statistics file dimension names
     trackdimname = 'tracks'
@@ -62,24 +65,28 @@ if __name__ == '__main__':
 
 
     # Read sonde file
-    dssonde = xr.open_dataset(sonde_file, decode_times=True)
+    dssonde = xr.open_dataset(aerosol_file, decode_times=True)
     sonde_basetime = dssonde.time.values
     # Convert sonde times to Pandas datetime
     sonde_times = pd.to_datetime(sonde_basetime)
-
+    # pdb.set_trace()
     # Create a variable list
     sonde_var_names = list(dssonde.data_vars.keys())
     # Add time to the list (since time is a coordinate, it is not included in the data_vars)
     sonde_var_names.append('time')
     # Drop yyyymmdd, hhmmss variables from the list (not sure how to handle char arrays yet)
-    sonde_var_names.remove('yyyymmdd')
-    sonde_var_names.remove('hhmmss')
+    sonde_var_names.remove('base_time')
+    sonde_var_names.remove('time_offset')
+#     sonde_var_names.remove('yyyymmdd') # EJ doesn't work for aerosol file
+#     sonde_var_names.remove('hhmmss') # EJ doesn't work for aerosol file
 
 
     # Calculate the number of times to save prior to initiation
     ntimes_per_hour = np.round(60. / freq_min).astype(int)
-    ntimes_prior = np.round((nhours+1) / ntimes_per_hour).astype(int)
+#     ntimes_prior = np.round((nhours+1) / ntimes_per_hour).astype(int)
+    ntimes_prior = np.round(nhours * ntimes_per_hour + 1).astype(int)
 
+    
     # Make relative time coordinate
     relative_time_coord = np.linspace(-1*(ntimes_prior-1), 0, ntimes_prior, dtype=int)
 
@@ -93,7 +100,7 @@ if __name__ == '__main__':
     for ivar in sonde_var_names:
         out_vars[ivar] = np.full((ntracks, ntimes_prior), dtype=np.float64, fill_value=np.nan)
 
-
+    
     # Loop over each cell track to find match sonde time
     for itrack in range(0, ntracks):
         # Calculate start time prior to initiation
@@ -108,8 +115,10 @@ if __name__ == '__main__':
         # Loop through each time in prior_times
         for prior_time in prior_times:
             # Calculate the absolute time difference in seconds
-            time_diffs = np.abs((sonde_times - prior_time).total_seconds())
-            
+#             pdb.set_trace()
+            time_diffs = np.abs((sonde_times - prior_time).total_seconds()) # OG
+            # time_diffs = np.abs((sonde_basetime - prior_time)).astype('timedelta64[s]') # EJ
+
             # Find the index of the minimum time difference
             min_diff_index = time_diffs.argmin()
             
@@ -135,7 +144,9 @@ if __name__ == '__main__':
             # Find valid indices (!= -1)
             _index = matchindex[:,itime]
             valid = (_index != -1)
+#             pdb.set_trace()
             if len(valid) > 0:
+#                 print(ivar)
                 if ivar == 'time':
                     # Convert datetime64[ns] dtype to np.float64 representing 
                     # seconds since the Unix epoch (1970-01-01 00:00:00)
@@ -160,7 +171,7 @@ if __name__ == '__main__':
 
     # Define global attributes
     gattr_dict = {
-        'title':  'InterpSonde parameters matched to tracked cells',
+        'title':  'Aerosol parameters matched to tracked cells',
         'Institution': 'Pacific Northwest National Laboratoy',
         'Contact': 'Zhe Feng, zhe.feng@pnnl.gov',
         'Created_on':  time.ctime(time.time()),
@@ -177,7 +188,7 @@ if __name__ == '__main__':
     for ivar in sonde_var_names:
         dsout[ivar].attrs = dssonde[ivar].attrs
 
-    dsout['time'].attrs['long_name'] = 'Epoch time of closest interpsonde'
+    dsout['time'].attrs['long_name'] = 'Epoch time of closest aerosol file?'
     dsout['time'].attrs['units'] = 'seconds since 1970-01-01 00:00:00'
     # dsout['time'].attrs['calendar'] = 'standard'
     # dsout['time'].attrs['units'] = basetime_units
@@ -194,7 +205,6 @@ if __name__ == '__main__':
     # Write netcdf file
     dsout.to_netcdf(path=output_filename, mode='w', format='NETCDF4', unlimited_dims=trackdimname, encoding=encoding)
     print(f'Output saved: {output_filename}')
-
 
 
 
