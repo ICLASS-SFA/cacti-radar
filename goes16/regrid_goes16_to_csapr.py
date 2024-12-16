@@ -3,6 +3,7 @@ import yaml
 import xarray as xr
 import xesmf as xe
 import dask
+import warnings
 from dask.distributed import Client, LocalCluster
 from pyflextrkr.ft_regrid_func import make_grid4regridder, make_weight_file
 
@@ -21,12 +22,24 @@ def regrid_goes16(file_in):
     status: <int>
         Returns 1
     """
+    warnings.filterwarnings("ignore")
     # Read input data
-    ds = xr.open_dataset(file_in, drop_variables=('scanline_time','base_time','time_offset'))
+    # ds = xr.open_dataset(file_in, drop_variables=('scanline_time','base_time','time_offset'))
+    # Need to read dataset, save certain time vars, then drop in order to not crash at regridder_s2d()
+    ds = xr.open_dataset(file_in)
+    time_offset = ds['time_offset']
+    ds = ds.drop_vars(['scanline_time','base_time','time_offset'])
+
     # ds = ds.rename({'longitude':'lon', 'latitude':'lat'})
     # ds = ds.rename({'element':'x', 'line':'y'})
-    ds = ds.assign_coords({'time':ds.time})
-    
+    # ds = ds.assign_coords({'time':ds.time})
+    # Need to transpose "ds" to have lat and lon as the last two dimensions:
+    # https://xesmf.readthedocs.io/en/stable/notebooks/Dataset.html#Invalid-dimension-orderings-to-avoid
+    # ds = ds.transpose("scn_type", "cld_type", "level", "cld_phase", "lat", "lon")
+
+    # Make regridder and save it first. Then uncomment
+    # regridder_s2d = xe.Regridder(grid_src, grid_dst, regrid_method)
+    # regridder_s2d.to_netcdf()
     # Read weight file
     regridder_s2d = xe.Regridder(grid_src, grid_dst, regrid_method, reuse_weights=True, filename=weight_filename)
 
@@ -34,7 +47,9 @@ def regrid_goes16(file_in):
     ds_out = regridder_s2d(ds, keep_attrs=True)
 
     # Expand dataset to create a time dimension
-    ds_out = ds_out.expand_dims(dim='time', axis=0)
+    # ds_out = ds_out.expand_dims(dim='time', axis=0)
+    ds_out = ds_out.assign_coords(time=('time', [time_offset.values]))
+
     # Change dataset time encoding
     time_unit = ds_out.time.dt.strftime('seconds since %Y-%m-%dT00:00:00.0').values.item()
     ds_out.time.encoding['units'] = time_unit
@@ -97,12 +112,12 @@ if __name__ == '__main__':
     # Build Regridder
     weight_filename = make_weight_file(gridfile_src, config)
 
-
+    warnings.filterwarnings("ignore")
     ######################################################################################
     if run_parallel==0:
         # serial version
+        print(f'serial run')
         for ifile in files_in:
-            print(f'serial run')
             # print(reflectivity_files[ifile])
             status = regrid_goes16(ifile)
             

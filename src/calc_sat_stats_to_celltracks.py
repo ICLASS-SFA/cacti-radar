@@ -79,6 +79,19 @@ def calc_sat_cellstats_singlefile(
     
     If no matched cell exists in the file, returns None.
     """
+    
+    # Moved this section of code out of the if statement to account for the cases where sat_filename does not exist.
+    # Create arrays for output statistics
+    nmatchcloud = len(idx_track)
+    cell_area = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    ctt_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    tir_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    cth_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    ctp_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    area_liq = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    area_ice = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    lwp_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
+    iwp_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
 
     # Check if satellite data file exist
     if os.path.isfile(sat_filename):
@@ -104,18 +117,6 @@ def calc_sat_cellstats_singlefile(
         # Replace background values with NaN
         tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
         ds.close()
-
-        # Create arrays for output statistics
-        nmatchcloud = len(idx_track)
-        cell_area = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        ctt_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        tir_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        cth_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        ctp_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        area_liq = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        area_ice = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        lwp_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        iwp_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
 
         if (nmatchcloud > 0):
             
@@ -177,59 +178,59 @@ def calc_sat_cellstats_singlefile(
                     if (inpix_ice > 0):
                         iwp_max[imatchcloud] = np.nanmax(lwp_iwp[itrackcmask_ice])
 
-            # Group outputs in dictionaries
-            out_dict = {
-                # "nmatchcloud": nmatchcloud,
-                "cell_area": cell_area, 
-                "cloud_top_temperature_min": ctt_min,
-                "temperature_ir_min": tir_min,
-                "cloud_top_height_max": cth_max,
-                "cloud_top_pressure_min": ctp_min,
-                "area_liquid": area_liq,
-                "area_ice": area_ice,
-                "lwp_max": lwp_max,
-                "iwp_max": iwp_max,
-            }
-            out_dict_attrs = {
-                # "nmatchcloud": nmatchcloud,
-                "cell_area": {
-                    "long_name": "Area of the convective cell in a track",
-                    "units": "km^2",
-                }, 
-                "cloud_top_temperature_min": {
-                    "long_name": "Minimum cloud top temperature in a track",
-                    "units": "K",
-                }, 
-                "temperature_ir_min": {
-                    "long_name": "Minimum IR temperature in a track",
-                    "units": "K",
-                }, 
-                "cloud_top_height_max": {
-                    "long_name": "Maximum cloud top height in a track",
-                    "units": "km",
-                }, 
-                "cloud_top_pressure_min": {
-                    "long_name": "Minimum cloud top pressure in a track",
-                    "units": "hPa",
-                }, 
-                "area_liquid": {
-                    "long_name": "Area of liquid cloud-top in a track",
-                    "units": "km^2",
-                }, 
-                "area_ice": {
-                    "long_name": "Area of ice cloud-top in a track",
-                    "units": "km^2",
-                }, 
-                "lwp_max": {
-                    "long_name": "Maximum liquid water path in a track",
-                    "units": "g/m^2",
-                }, 
-                "iwp_max": {
-                    "long_name": "Maximum ice water path in a track",
-                    "units": "g/m^2",
-                }, 
-            }
-            return out_dict, out_dict_attrs
+    # Group outputs in dictionaries
+    out_dict = {
+        # "nmatchcloud": nmatchcloud,
+        "cell_area": cell_area, 
+        "cloud_top_temperature_min": ctt_min,
+        "temperature_ir_min": tir_min,
+        "cloud_top_height_max": cth_max,
+        "cloud_top_pressure_min": ctp_min,
+        "area_liquid": area_liq,
+        "area_ice": area_ice,
+        "lwp_max": lwp_max,
+        "iwp_max": iwp_max,
+    }
+    out_dict_attrs = {
+        # "nmatchcloud": nmatchcloud,
+        "cell_area": {
+            "long_name": "Area of the convective cell in a track",
+            "units": "km^2",
+        }, 
+        "cloud_top_temperature_min": {
+            "long_name": "Minimum cloud top temperature in a track",
+            "units": "K",
+        }, 
+        "temperature_ir_min": {
+            "long_name": "Minimum IR temperature in a track",
+            "units": "K",
+        }, 
+        "cloud_top_height_max": {
+            "long_name": "Maximum cloud top height in a track",
+            "units": "km",
+        }, 
+        "cloud_top_pressure_min": {
+            "long_name": "Minimum cloud top pressure in a track",
+            "units": "hPa",
+        }, 
+        "area_liquid": {
+            "long_name": "Area of liquid cloud-top in a track",
+            "units": "km^2",
+        }, 
+        "area_ice": {
+            "long_name": "Area of ice cloud-top in a track",
+            "units": "km^2",
+        }, 
+        "lwp_max": {
+            "long_name": "Maximum liquid water path in a track",
+            "units": "g/m^2",
+        }, 
+        "iwp_max": {
+            "long_name": "Maximum ice water path in a track",
+            "units": "g/m^2",
+        }, 
+    }
+    return out_dict, out_dict_attrs
 
 
 #########################################################
@@ -261,7 +262,8 @@ if __name__ == '__main__':
     # Input file basenames
     stats_filebase = 'trackstats_'
     pixel_filebase = 'celltracks_'
-    sat_filebase = 'corvisstpx2drectg16v4minnisX1.regrid2csapr2gridded.c1.'
+    # sat_filebase = 'corvisstpx2drectg16v4minnisX1.regrid2csapr2gridded.c1.'
+    sat_filebase = 'maovisstpx2dg13minnisX1.regrid2sipamgridded.c1.'
 
     # Output statistics filename
     output_filename = f'{output_path}stats_goes16_{startdate}_{enddate}.nc'
@@ -337,7 +339,6 @@ if __name__ == '__main__':
                     pixel_radius
                 )
                 final_results.append(iresult)
-                # import pdb; pdb.set_trace()
 
     elif run_parallel==1:
         print(f'Parallel version by dask')
@@ -372,6 +373,57 @@ if __name__ == '__main__':
         # Collect results from Dask
         print("Computing statistics ...")
         final_results = dask.compute(*final_results)
+
+    elif config['run_parallel'] == 2:
+        print("Dask-MPI")
+
+        # Initialize the 4 lists of arguments for the calc_sat_cellstats_singlefile function
+        list1=[];list2=[];list3=[];list4=[]
+
+        # Extracting .values from stats_basetime in hopes of increasing the speed of the for loop
+        stats_basetime_data = stats_basetime.values
+
+        # Loop over each pixel-file and call function to calculate
+        for ifile in range(nfiles):
+            print(ifile)
+            # Find all matching time indices from robust MCS stats file to the current pixel file
+            matchindices = np.array(
+                np.where(np.abs(stats_basetime_data - pixel_basetime[ifile]) < time_window)
+            )
+            # The returned match indices are for [tracks, times] dimensions respectively
+            idx_track = matchindices[0]
+            idx_time = matchindices[1]
+
+            if len(idx_track) > 0:
+                # Save matchindices for the current pixel file to the overall list
+                trackindices_all.append(idx_track)
+                timeindices_all.append(idx_time)
+
+                list1.append(pixelfilelist[ifile])
+                list2.append(match_satfilelist[ifile])
+                list3.append(idx_track)
+                list4.append(pixel_radius)
+
+        print(f"Done creating 4 lists of arguments for Dask-MPI")
+
+        # The following line is taken from 
+        # https://gitlab.com/NERSC/nersc-notebooks/-/blob/main/perlmutter/dask/dask-calculate-pi.py
+        scheduler_file = os.path.join(os.environ["SCRATCH"], "scheduler.json")
+        client = Client(scheduler_file=scheduler_file)
+
+        # Create the list of arguments for each task
+        futures = client.map(
+            calc_sat_cellstats_singlefile,  # Your existing function
+            list1,  # List of pixel files (passed to each worker)
+            list2,  # List of satellite files (passed to each worker)
+            list3,  # List of track indices (passed to each worker)
+            list4  # List of pixel radii (passed to each worker)
+        )
+
+        # Collect the results
+        print("Computing statistics ...")
+        final_results = client.gather(futures)
+        
     
     # Make a variable list from one of the returned dictionaries
     var_names = list(final_results[0][0].keys())

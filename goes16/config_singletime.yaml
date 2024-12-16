@@ -1,0 +1,16 @@
+---
+# Run in parallel
+run_parallel: 1
+# Number of workers for Dask
+n_workers: 32
+# Threads per worker
+threads_per_worker: 1
+# Dates to work on
+dates_input: '2015'
+# Satellite data directory
+dir_input: '/global/cfs/cdirs/m1657/enochjo/goamazon/arm/maovisstgridg13minnisX1.c1/'
+# Output directory
+dir_output: '/global/cfs/cdirs/m1657/enochjo/goamazon/arm/maovisstgridg13minnisX1.c1.singletime/'
+
+# Input/Output file basename
+basename_input: 'maovisstgridg13minnisX1.c1.'

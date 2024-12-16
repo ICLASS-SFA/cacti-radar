@@ -1,0 +1,37 @@
+---
+# Run in parallel
+run_parallel: 1
+# Number of workers for Dask
+n_workers: 32
+# Threads per worker
+threads_per_worker: 1
+# Dates to work on
+dates_input: '201509'
+# Satellite data directory
+dir_input: '/global/cfs/cdirs/m1657/enochjo/goamazon/arm/maovisstpx2dg13minnisX1.c1/'
+# dir_input: '/global/cfs/cdirs/m1657/enochjo/goamazon/arm/maovisstgridg13minnisX1.c1.singletime/'
+
+# Destination grid (CSAPR grid file)
+# file_radar: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_2500m.Terrain_RangeMask.nc'
+# Pre-generated weight file (produced by test_regrid_goes16_to_csapr.ipynb)
+weight_filename: '/global/cfs/cdirs/m1657/enochjo/goamazon/arm/nearest_s2d_400x1000_121x121.nc'
+# Output directory
+dir_output: '/global/cfs/cdirs/m1657/enochjo/goamazon/arm/maovisstpx2dg13minnisX1.regrid2sipamgridded.c1/'
+# Input/Output file basename
+basename_input: 'maovisstpx2dg13minnisX1.c1.'
+# basename_input: 'maovisstgridg13minnisX1.c1.'
+basename_output: 'maovisstpx2dg13minnisX1.regrid2sipamgridded.c1.'
+
+# Specify regrid input data options
+# Destination grid file that contains lat/lon grid info
+# gridfile_dst: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/corgridded_terrain.c0/CSAPR2_Taranis_Gridded_2500m.Terrain_RangeMask.nc'
+# gridfile_dst: '/global/cfs/projectdirs/m1657/tais958/PyFLEXTRKR-dev/SAAG_mask/celltracking/20140101.0000_20150101.0000/celltracks_20140702_070000.nc'
+gridfile_dst: '/global/cfs/projectdirs/m1657/tais958/PyFLEXTRKR-dev/mcs_2014/celltracking/20140101.0000_20150101.0000/celltracks_20141231_234810.nc'
+# Source grid x/y coordinate variable names
+x_coordname_src: 'longitude'
+y_coordname_src: 'latitude'
+# Destination grid x/y coordinate variable names
+x_coordname_dst: 'longitude'
+y_coordname_dst: 'latitude'
+# Regridding method
+regrid_method: 'nearest_s2d'

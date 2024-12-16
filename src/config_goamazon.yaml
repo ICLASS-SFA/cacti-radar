@@ -1,0 +1,25 @@
+---
+# Run in parallel
+run_parallel: 1
+# Number of workers for Dask
+n_workers: 64
+# Threads per worker
+threads_per_worker: 1
+# Start/end date/time
+startdate: '20140101.0000'
+enddate: '20150101.0000'
+# Maximum time difference allowed to match the datasets
+time_window: 300  # [second]
+# Input/output file locations
+# Track stats directory
+stats_path: '/global/cfs/projectdirs/m1657/enochjo/goamazon/mcs_2014/stats/'
+# Track pixel file directory
+pixelfile_path: '/global/cfs/projectdirs/m1657/tais958/PyFLEXTRKR-dev/mcs_2014/celltracking/20140101.0000_20150101.0000/'
+# PPI 3D file directory
+# ppifile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/'
+# Satellite pixel file directory
+satfile_path: '/global/cfs/cdirs/m1657/enochjo/goamazon/arm/maovisstpx2dg13minnisX1.regrid2sipamgridded.c1/'
+# Sounding stats file
+sonde_file: '/global/cfs/projectdirs/m1657/enochjo/goamazon/mcs_2014/stats/Interpsonde_parameters_GoA_v5.5.nc'
+# Aerosol file
+# aerosol_file: '/global/cfs/projectdirs/m1657/avarble/cacti/CACTI_Aerosol_Concentrations_15min.nc'
