@@ -94,7 +94,7 @@ def calc_3d_cellstats_singlefile(
         kdp = dsv['kdp_pos_lp_reg'].squeeze()
         rainrate = dsv['taranis_rain_rate'].squeeze()
         Dm = dsv['taranis_Dm'].squeeze()
-        rwc = dsv['lwc_combined'].squeeze()
+        rwc = dsv['rwc_combined'].squeeze()
         hid = dsv['hydrometeor_identification_post_grid'].squeeze()
         # dsv.close()
 

@@ -61,17 +61,19 @@ if __name__ == '__main__':
 
     # Read sonde file
     dssonde = xr.open_dataset(sonde_file, decode_times=True)
-    sonde_basetime = dssonde.time.values
+    # sonde_basetime = dssonde.time.values
+    sonde_basetime = dssonde.basetime.values # Modified to basetime (EJ)
     # Convert sonde times to Pandas datetime
     sonde_times = pd.to_datetime(sonde_basetime)
+    # import pdb; pdb.set_trace()
 
     # Create a variable list
     sonde_var_names = list(dssonde.data_vars.keys())
     # Add time to the list (since time is a coordinate, it is not included in the data_vars)
     sonde_var_names.append('time')
     # Drop yyyymmdd, hhmmss variables from the list (not sure how to handle char arrays yet)
-    sonde_var_names.remove('yyyymmdd')
-    sonde_var_names.remove('hhmmss')
+    # sonde_var_names.remove('yyyymmdd') # Commented this line out with latest surfacemet stuff (EJ)
+    # sonde_var_names.remove('hhmmss') # (EJ)
 
 
     # Calculate the number of times to save prior to initiation

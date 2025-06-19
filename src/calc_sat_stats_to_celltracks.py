@@ -106,7 +106,7 @@ def calc_sat_cellstats_singlefile(
         # tracknumbermap_cmask = (cmask > 0) * tracknumbermap
         # Replace background values with NaN
         # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
-        tracknumbermap_cmask = ds['tracknumber'].squeeze().data * ds['conv_mask'].squeeze().data
+        tracknumbermap_cmask = ds['tracknumber'].squeeze().data # * ds['conv_mask'].squeeze().data
         tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
         
         ds.close()
@@ -117,6 +117,8 @@ def calc_sat_cellstats_singlefile(
         ctt_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
         tir_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
         cth_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        cth_mean = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        cth_median = np.full((nmatchcloud), np.nan, dtype=np.float32)
         ctp_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
         area_liq = np.full((nmatchcloud), np.nan, dtype=np.float32)
         area_ice = np.full((nmatchcloud), np.nan, dtype=np.float32)
@@ -172,6 +174,8 @@ def calc_sat_cellstats_singlefile(
                     ctt_min[imatchcloud] = np.nanmin(sub_ctt)
                     tir_min[imatchcloud] = np.nanmin(sub_tir)
                     cth_max[imatchcloud] = np.nanmax(sub_cth)
+                    cth_mean[imatchcloud] = np.nanmean(sub_cth)
+                    cth_median[imatchcloud] = np.nanmedian(sub_cth)
                     ctp_min[imatchcloud] = np.nanmin(sub_ctp)
                     # Area with liquid/ice from cloud phase flags
                     # 0=clear with snow/ice, 1=water, 2=ice, 3=no retrieval, 4=clear, 5=bad retrieval, 6=weak water, 7=weak ice
@@ -190,6 +194,8 @@ def calc_sat_cellstats_singlefile(
                 "cloud_top_temperature_min": ctt_min,
                 "temperature_ir_min": tir_min,
                 "cloud_top_height_max": cth_max,
+                "cloud_top_height_mean": cth_mean,
+                "cloud_top_height_median": cth_median,
                 "cloud_top_pressure_min": ctp_min,
                 "area_liquid": area_liq,
                 "area_ice": area_ice,
@@ -212,6 +218,14 @@ def calc_sat_cellstats_singlefile(
                 }, 
                 "cloud_top_height_max": {
                     "long_name": "Maximum cloud top height in a track",
+                    "units": "km",
+                }, 
+                "cloud_top_height_mean": {
+                    "long_name": "Mean cloud top height in a track",
+                    "units": "km",
+                }, 
+                "cloud_top_height_median": {
+                    "long_name": "Mean cloud top height in a track",
                     "units": "km",
                 }, 
                 "cloud_top_pressure_min": {
