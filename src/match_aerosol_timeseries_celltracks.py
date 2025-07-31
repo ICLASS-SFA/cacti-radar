@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # Number of relative hours prior to track start to make time series
     nhours = 3
     # Frequency of time series in minutes
-    freq_min = 60
+    freq_min = 5
 
     # Maximum time difference allowed to match the datasets
     time_window = 30  # [second]
@@ -76,8 +76,8 @@ if __name__ == '__main__':
 
     # Calculate the number of times to save prior to initiation
     ntimes_per_hour = np.round(60. / freq_min).astype(int)
-    ntimes_prior = np.round((nhours+1) / ntimes_per_hour).astype(int)
-
+    ntimes_prior = np.round(nhours * ntimes_per_hour + 1).astype(int)
+    # import pdb; pdb.set_trace()
     # Make relative time coordinate
     relative_time_coord = np.linspace(-1*(ntimes_prior-1), 0, ntimes_prior, dtype=int)
 
