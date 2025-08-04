@@ -6,15 +6,15 @@ n_workers: 64
 # Threads per worker
 threads_per_worker: 1
 # Start/end date/time
-startdate: '20140101.0000'
-enddate: '20150101.0000'
+startdate: '20150101.0000'
+enddate: '20160101.0000'
 # Maximum time difference allowed to match the datasets
 time_window: 300  # [second]
 # Input/output file locations
 # Track stats directory
-stats_path: '/global/cfs/projectdirs/m1657/enochjo/goamazon/mcs_2014/stats/'
+stats_path: '/global/cfs/projectdirs/m1657/enochjo/goamazon/mcs_2015/stats/'
 # Track pixel file directory
-pixelfile_path: '/global/cfs/projectdirs/m1657/tais958/PyFLEXTRKR-dev/mcs_2014/celltracking/20140101.0000_20150101.0000/'
+pixelfile_path: '/global/cfs/projectdirs/m1657/tais958/PyFLEXTRKR-dev/mcs_2015/celltracking/20150101.0000_20160101.0000/'
 # PPI 3D file directory
 # ppifile_path: '/gpfs/wolf2/arm/atm131/proj-shared/zfeng/cacti/csapr/taranis_corcsapr2cfrppiqcM1_gridded.c1/'
 # Satellite pixel file directory
