@@ -106,8 +106,12 @@ def calc_sat_cellstats_singlefile(
         # tracknumbermap_cmask = (cmask > 0) * tracknumbermap
         # Replace background values with NaN
         # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
-        tracknumbermap_cmask = ds['tracknumber'].squeeze().data # * ds['conv_mask'].squeeze().data
-        tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
+        cmask = ds['conv_mask'].squeeze()
+        # tracknumbermap = ds['tracknumber'].squeeze()
+        tracknumbermap = (cmask > 0) * ds['tracknumber'].squeeze()
+        # tracknumbermap_cmask = ds['tracknumber'].squeeze().data # * ds['conv_mask'].squeeze().data
+        # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
+        tracknumbermap = tracknumbermap.where(tracknumbermap > 0, other=np.NaN)
         
         ds.close()
 
@@ -115,11 +119,14 @@ def calc_sat_cellstats_singlefile(
         nmatchcloud = len(idx_track)
         cell_area = np.full((nmatchcloud), np.nan, dtype=np.float32)
         ctt_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        ctt_median = np.full((nmatchcloud), np.nan, dtype=np.float32)
         tir_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        tir_median = np.full((nmatchcloud), np.nan, dtype=np.float32)
         cth_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
         cth_mean = np.full((nmatchcloud), np.nan, dtype=np.float32)
         cth_median = np.full((nmatchcloud), np.nan, dtype=np.float32)
         ctp_min = np.full((nmatchcloud), np.nan, dtype=np.float32)
+        ctp_median = np.full((nmatchcloud), np.nan, dtype=np.float32)
         area_liq = np.full((nmatchcloud), np.nan, dtype=np.float32)
         area_ice = np.full((nmatchcloud), np.nan, dtype=np.float32)
         lwp_max = np.full((nmatchcloud), np.nan, dtype=np.float32)
@@ -134,7 +141,7 @@ def calc_sat_cellstats_singlefile(
                 itracknum = idx_track[imatchcloud] + 1
 
                 # Get current cell mask
-                itrackcmask = tracknumbermap_cmask == itracknum
+                itrackcmask = tracknumbermap == itracknum
 
                 # Count the number of pixels for the original cell mask
                 inpix_cloud = np.count_nonzero(itrackcmask)
@@ -172,11 +179,14 @@ def calc_sat_cellstats_singlefile(
                     # Calculate new statistics of the cloud
                     # Minimum/Maximum cloud-top variables
                     ctt_min[imatchcloud] = np.nanmin(sub_ctt)
+                    ctt_median[imatchcloud] = np.nanmedian(sub_ctt)
                     tir_min[imatchcloud] = np.nanmin(sub_tir)
+                    tir_median[imatchcloud] = np.nanmedian(sub_tir)
                     cth_max[imatchcloud] = np.nanmax(sub_cth)
                     cth_mean[imatchcloud] = np.nanmean(sub_cth)
                     cth_median[imatchcloud] = np.nanmedian(sub_cth)
                     ctp_min[imatchcloud] = np.nanmin(sub_ctp)
+                    ctp_median[imatchcloud] = np.nanmedian(sub_ctp)
                     # Area with liquid/ice from cloud phase flags
                     # 0=clear with snow/ice, 1=water, 2=ice, 3=no retrieval, 4=clear, 5=bad retrieval, 6=weak water, 7=weak ice
                     area_liq[imatchcloud] = np.count_nonzero(sub_phase == 1) * pixel_radius**2
@@ -192,11 +202,14 @@ def calc_sat_cellstats_singlefile(
                 # "nmatchcloud": nmatchcloud,
                 "cell_area": cell_area, 
                 "cloud_top_temperature_min": ctt_min,
+                "cloud_top_temperature_median": ctt_median,
                 "temperature_ir_min": tir_min,
+                "temperature_ir_median": tir_median,
                 "cloud_top_height_max": cth_max,
                 "cloud_top_height_mean": cth_mean,
                 "cloud_top_height_median": cth_median,
                 "cloud_top_pressure_min": ctp_min,
+                "cloud_top_pressure_median": ctp_median,
                 "area_liquid": area_liq,
                 "area_ice": area_ice,
                 "lwp_max": lwp_max,
@@ -211,9 +224,17 @@ def calc_sat_cellstats_singlefile(
                 "cloud_top_temperature_min": {
                     "long_name": "Minimum cloud top temperature in a track",
                     "units": "K",
+                },  
+                "cloud_top_temperature_median": {
+                    "long_name": "Median cloud top temperature in a track",
+                    "units": "K",
                 }, 
                 "temperature_ir_min": {
                     "long_name": "Minimum IR temperature in a track",
+                    "units": "K",
+                },  
+                "temperature_ir_median": {
+                    "long_name": "Median IR temperature in a track",
                     "units": "K",
                 }, 
                 "cloud_top_height_max": {
@@ -230,6 +251,10 @@ def calc_sat_cellstats_singlefile(
                 }, 
                 "cloud_top_pressure_min": {
                     "long_name": "Minimum cloud top pressure in a track",
+                    "units": "hPa",
+                }, 
+                "cloud_top_pressure_median": {
+                    "long_name": "Median cloud top pressure in a track",
                     "units": "hPa",
                 }, 
                 "area_liquid": {

@@ -102,9 +102,9 @@ def calc_3d_cellstats_singlefile(
         dbz = dsv['taranis_attenuation_corrected_reflectivity'].where(mask).squeeze()
         zdr = dsv['taranis_attenuation_corrected_differential_reflectivity'].where(mask).squeeze()
         kdp = dsv['kdp_pos_lp_reg'].where(mask).squeeze()
-        rainrate = dsv['taranis_rain_rate'].where(mask).squeeze()
-        Dm = dsv['taranis_Dm'].where(mask).squeeze()
-        rwc = dsv['rwc_combined'].where(mask).squeeze()
+        rainrate = dsv['taranis_rain_rate'].where(mask).where(dsv['taranis_rain_rate'] >= 0).squeeze()
+        Dm = dsv['taranis_Dm'].where(mask).where(dsv['taranis_Dm'] >= 0).squeeze()
+        rwc = dsv['rwc_combined'].where(mask).where(dsv['rwc_combined'] >= 0).squeeze()
         hid = dsv['hydrometeor_identification_post_grid'].where(mask).squeeze()
         rho = dsv['copol_correlation_coeff'].where(mask).squeeze()
         temp = dsv['sounding_temperature_post_grid'].isel(x=0).isel(y=0).squeeze()
@@ -122,22 +122,26 @@ def calc_3d_cellstats_singlefile(
         # Read variables
         cmask = ds['conv_mask'].squeeze()
         # core_mask = ds['conv_core'].squeeze()
-        tracknumbermap = ds['tracknumber'].squeeze()
+        # tracknumbermap = ds['tracknumber'].squeeze()
         # Get cell tracknumber mask
         # Convert convective cell mask to binary, then multiply by tracknumber
-        tracknumbermap_cmask = (cmask > 0) * tracknumbermap
+        tracknumbermap = (cmask > 0) * ds['tracknumber'].squeeze()
         # tracknumbermap_cmask = core_mask * tracknumbermap
         # Replace background values with NaN
-        tracknumbermap_cmask = tracknumbermap_cmask.where(tracknumbermap_cmask > 0, other=np.NaN)
+        tracknumbermap = tracknumbermap.where(tracknumbermap > 0, other=np.NaN)
         ds.close()
 
         # Create arrays for output statistics
         nmatchcloud = len(idx_track)
         cell_area = np.full((nmatchcloud), np.nan, dtype=np.float32)
-        max_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p02_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p10_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p25_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p50_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p75_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p90_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p98_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        max_dbz = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz0 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz10 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz20 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
@@ -146,37 +150,58 @@ def calc_3d_cellstats_singlefile(
         npix_dbz50 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         npix_dbz60 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         min_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p02_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p10_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p25_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p50_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p75_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p90_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p98_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_zdr = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         min_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p02_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p10_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p25_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p50_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p75_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p90_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p98_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_kdp = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         min_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p02_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p10_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p25_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p50_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p75_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p90_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p98_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_rho = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        min_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p02_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p10_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p25_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p50_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p75_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p90_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p98_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_rainrate = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        min_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p02_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p10_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p25_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p50_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p75_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p90_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p98_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_Dm = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        min_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p02_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p10_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p25_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p50_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p75_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         p90_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        p98_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         volrain = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         mode_hid = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
@@ -206,7 +231,7 @@ def calc_3d_cellstats_singlefile(
                 itracknum = idx_track[imatchcloud] + 1
 
                 # Count the number of pixels for the original cell mask
-                inpix_cloud = np.count_nonzero(tracknumbermap_cmask == itracknum)
+                inpix_cloud = np.count_nonzero(tracknumbermap == itracknum)
                 
                 # Get location indices of the cell (original), used to calculate cell_area
                 # icloudlocationy_orig, icloudlocationx_orig = np.where(tracknumbermap_cmask == itracknum)
@@ -244,42 +269,67 @@ def calc_3d_cellstats_singlefile(
                     with warnings.catch_warnings():
                         warnings.simplefilter("ignore", category=RuntimeWarning)
                         # Max profile
+                        p02_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 2.5, axis=(1,2)).T
+                        p10_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 10, axis=(1,2)).T
+                        p25_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 25, axis=(1,2)).T
                         p50_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 50, axis=(1,2)).T
                         p75_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 75, axis=(1,2)).T
                         p90_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 90, axis=(1,2)).T
+                        p98_dbz[imatchcloud,:] = np.nanpercentile(sub_dbz, 97.5, axis=(1,2)).T
                         max_dbz[imatchcloud,:] = np.nanmax(sub_dbz, axis=(1,2))
                         min_zdr[imatchcloud,:] = np.nanmin(sub_zdr, axis=(1,2)).T
+                        p02_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 2.5, axis=(1,2)).T
                         p10_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 10, axis=(1,2)).T
                         p25_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 25, axis=(1,2)).T
                         p50_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 50, axis=(1,2)).T
                         p75_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 75, axis=(1,2)).T
                         p90_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 90, axis=(1,2)).T
+                        p98_zdr[imatchcloud,:] = np.nanpercentile(sub_zdr, 97.5, axis=(1,2)).T
                         max_zdr[imatchcloud,:] = np.nanmax(sub_zdr, axis=(1,2))
                         min_kdp[imatchcloud,:] = np.nanmin(sub_kdp, axis=(1,2)).T
+                        p02_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 2.5, axis=(1,2)).T
                         p10_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 10, axis=(1,2)).T
                         p25_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 25, axis=(1,2)).T
                         p50_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 50, axis=(1,2)).T
                         p75_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 75, axis=(1,2)).T
                         p90_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 90, axis=(1,2)).T
+                        p98_kdp[imatchcloud,:] = np.nanpercentile(sub_kdp, 97.5, axis=(1,2)).T
                         max_kdp[imatchcloud,:] = np.nanmax(sub_kdp, axis=(1,2))
                         min_rho[imatchcloud,:] = np.nanmin(sub_rho, axis=(1,2)).T
+                        p02_rho[imatchcloud,:] = np.nanpercentile(sub_rho, 2.5, axis=(1,2)).T
                         p10_rho[imatchcloud,:] = np.nanpercentile(sub_rho, 10, axis=(1,2)).T
                         p25_rho[imatchcloud,:] = np.nanpercentile(sub_rho, 25, axis=(1,2)).T
                         p50_rho[imatchcloud,:] = np.nanpercentile(sub_rho, 50, axis=(1,2)).T
                         p75_rho[imatchcloud,:] = np.nanpercentile(sub_rho, 75, axis=(1,2)).T
                         p90_rho[imatchcloud,:] = np.nanpercentile(sub_rho, 90, axis=(1,2)).T
+                        p98_rho[imatchcloud,:] = np.nanpercentile(sub_rho, 97.5, axis=(1,2)).T
                         max_rho[imatchcloud,:] = np.nanmax(sub_rho, axis=(1,2))
+                        min_rainrate[imatchcloud,:] = np.nanmin(sub_rainrate, axis=(1,2))
+                        p02_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 2.5, axis=(1,2)).T
+                        p10_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 10, axis=(1,2)).T
+                        p25_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 25, axis=(1,2)).T
                         p50_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 50, axis=(1,2)).T
                         p75_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 75, axis=(1,2)).T
                         p90_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 90, axis=(1,2)).T
+                        p98_rainrate[imatchcloud,:] = np.nanpercentile(sub_rainrate, 97.5, axis=(1,2)).T
                         max_rainrate[imatchcloud,:] = np.nanmax(sub_rainrate, axis=(1,2))
+                        min_Dm[imatchcloud,:] = np.nanmin(sub_Dm, axis=(1,2))
+                        p02_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 2.5, axis=(1,2)).T
+                        p10_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 10, axis=(1,2)).T
+                        p25_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 25, axis=(1,2)).T
                         p50_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 50, axis=(1,2)).T
                         p75_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 75, axis=(1,2)).T
                         p90_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 90, axis=(1,2)).T
+                        p98_Dm[imatchcloud,:] = np.nanpercentile(sub_Dm, 97.5, axis=(1,2)).T
                         max_Dm[imatchcloud,:] = np.nanmax(sub_Dm, axis=(1,2))
+                        min_rwc[imatchcloud,:] = np.nanmin(sub_rwc, axis=(1,2))
+                        p02_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 2.5, axis=(1,2)).T
+                        p10_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 10, axis=(1,2)).T
+                        p25_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 25, axis=(1,2)).T
                         p50_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 50, axis=(1,2)).T
                         p75_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 75, axis=(1,2)).T
                         p90_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 90, axis=(1,2)).T
+                        p98_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 97.5, axis=(1,2)).T
                         max_rwc[imatchcloud,:] = np.nanmax(sub_rwc, axis=(1,2))
                         mode_hid[imatchcloud,:],_ = mode(sub_hid,axis=(1,2),nan_policy='omit')
                         hid_01[imatchcloud,:] = np.count_nonzero(sub_hid == 1, axis=(1,2))
@@ -317,9 +367,13 @@ def calc_3d_cellstats_singlefile(
             out_dict = {
                 # nmatchcloud, 
                 "cell_area": cell_area,
+                "p02_reflectivity": p02_dbz,
+                "p10_reflectivity": p10_dbz,
+                "p25_reflectivity": p25_dbz,
                 "p50_reflectivity": p50_dbz,
                 "p75_reflectivity": p75_dbz,
                 "p90_reflectivity": p90_dbz,
+                "p98_reflectivity": p98_dbz,
                 "max_reflectivity": max_dbz,
                 "npix_dbz0": npix_dbz0,
                 "npix_dbz10": npix_dbz10,
@@ -329,37 +383,58 @@ def calc_3d_cellstats_singlefile(
                 "npix_dbz50": npix_dbz50,
                 "npix_dbz60": npix_dbz60,
                 "min_zdr": min_zdr,
+                "p02_zdr": p02_zdr,
                 "p10_zdr": p10_zdr,
                 "p25_zdr": p25_zdr,
                 "p50_zdr": p50_zdr,
                 "p75_zdr": p75_zdr,
                 "p90_zdr": p90_zdr,
+                "p98_zdr": p98_zdr,
                 "max_zdr": max_zdr,
                 "min_kdp": min_kdp,
+                "p02_kdp": p02_kdp,
                 "p10_kdp": p10_kdp,
                 "p25_kdp": p25_kdp,
                 "p50_kdp": p50_kdp,
                 "p75_kdp": p75_kdp,
                 "p90_kdp": p90_kdp,
+                "p98_kdp": p98_kdp,
                 "max_kdp": max_kdp,
                 "min_rho": min_rho,
+                "p02_rho": p02_rho,
                 "p10_rho": p10_rho,
                 "p25_rho": p25_rho,
                 "p50_rho": p50_rho,
                 "p75_rho": p75_rho,
                 "p90_rho": p90_rho,
+                "p98_rho": p98_rho,
                 "max_rho": max_rho,
+                "min_rainrate": min_rainrate,
+                "p02_rainrate": p02_rainrate,
+                "p10_rainrate": p10_rainrate,
+                "p25_rainrate": p25_rainrate,
                 "p50_rainrate": p50_rainrate,
                 "p75_rainrate": p75_rainrate,
                 "p90_rainrate": p90_rainrate,
+                "p98_rainrate": p98_rainrate,
                 "max_rainrate": max_rainrate,
+                "min_Dm": min_Dm,
+                "p02_Dm": p02_Dm,
+                "p10_Dm": p10_Dm,
+                "p25_Dm": p25_Dm,
                 "p50_Dm": p50_Dm,
                 "p75_Dm": p75_Dm,
                 "p90_Dm": p90_Dm,
+                "p98_Dm": p98_Dm,
                 "max_Dm": max_Dm,
+                "min_rwc": min_rwc,
+                "p02_rwc": p02_rwc,
+                "p10_rwc": p10_rwc,
+                "p25_rwc": p25_rwc,
                 "p50_rwc": p50_rwc,
                 "p75_rwc": p75_rwc,
                 "p90_rwc": p90_rwc,
+                "p98_rwc": p98_rwc,
                 "max_rwc": max_rwc,
                 "volrain": volrain,
                 "species": mode_hid,
@@ -375,12 +450,25 @@ def calc_3d_cellstats_singlefile(
                 "big_drops": hid_10,
                 "num_dbz": numdbz,
                 "num_rwc": numrwc,
-                "hid_temp": temp,
+                "hid_temp": hidtemp,
             }
+            # import pdb; pdb.set_trace()
             out_dict_attrs = {
                 "cell_area": {
                     "long_name": "Area of the convective cell in a track",
                     "units": "km^2",
+                },  
+                'p02_reflectivity': {
+                    "long_name": '2.5th pct reflectivity profile in a track',
+                    "units": "dBZ",
+                }, 
+                'p10_reflectivity': {
+                    "long_name": '10th pct reflectivity profile in a track',
+                    "units": "dBZ",
+                }, 
+                'p25_reflectivity': {
+                    "long_name": '25th pct reflectivity profile in a track',
+                    "units": "dBZ",
                 }, 
                 'p50_reflectivity': {
                     "long_name": '50th pct reflectivity profile in a track',
@@ -392,6 +480,10 @@ def calc_3d_cellstats_singlefile(
                 }, 
                 'p90_reflectivity': {
                     "long_name": '90th pct reflectivity profile in a track',
+                    "units": "dBZ",
+                },  
+                'p98_reflectivity': {
+                    "long_name": '97.5th pct reflectivity profile in a track',
                     "units": "dBZ",
                 }, 
                 'max_reflectivity': {
@@ -430,6 +522,10 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "Minimum ZDR profile in a track",
                     "units": "dB",
                 },
+                'p02_zdr': {
+                    "long_name": "2.5th pct ZDR profile in a track",
+                    "units": "dB",
+                },
                 'p10_zdr': {
                     "long_name": "10th pct ZDR profile in a track",
                     "units": "dB",
@@ -450,12 +546,20 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "90th pct ZDR profile in a track",
                     "units": "dB",
                 },
+                'p98_zdr': {
+                    "long_name": "97.5th pct ZDR profile in a track",
+                    "units": "dB",
+                },
                 'max_zdr': {
                     "long_name": "Maximum ZDR profile in a track",
                     "units": "dB",
                 },
                 'min_kdp': {
                     "long_name": "Minimum KDP profile in a track",
+                    "units": "degrees/km",
+                },
+                'p02_kdp': {
+                    "long_name": "2.5th pct KDP profile in a track",
                     "units": "degrees/km",
                 },
                 'p10_kdp': {
@@ -478,12 +582,20 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "90th pct KDP profile in a track",
                     "units": "degrees/km",
                 },
+                'p98_kdp': {
+                    "long_name": "97.5th pct KDP profile in a track",
+                    "units": "degrees/km",
+                },
                 'max_kdp': {
                     "long_name": "Maximum KDP profile in a track",
                     "units": "degrees/km",
                 },
                 'min_rho': {
                     "long_name": "Minimum RHO profile in a track",
+                    "units": "1",
+                },
+                'p02_rho': {
+                    "long_name": "2.5th pct RHO profile in a track",
                     "units": "1",
                 },
                 'p10_rho': {
@@ -506,9 +618,29 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "90th pct RHO profile in a track",
                     "units": "1",
                 },
+                'p98_rho': {
+                    "long_name": "97.5th pct RHO profile in a track",
+                    "units": "1",
+                },
                 'max_rho': {
                     "long_name": "Maximum RHO profile in a track",
                     "units": "1",
+                },
+                'min_rainrate': {
+                    "long_name": "Minimum rain rate profile in a track",
+                    "units": "mm/hr",
+                },
+                'p02_rainrate': {
+                    "long_name": "2.5th pct rain rate profile in a track",
+                    "units": "mm/hr",
+                },
+                'p10_rainrate': {
+                    "long_name": "10th pct rain rate profile in a track",
+                    "units": "mm/hr",
+                },
+                'p25_rainrate': {
+                    "long_name": "25th pct rain rate profile in a track",
+                    "units": "mm/hr",
                 },
                 'p50_rainrate': {
                     "long_name": "50th pct rain rate profile in a track",
@@ -522,9 +654,29 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "90th pct rain rate profile in a track",
                     "units": "mm/hr",
                 },
+                'p98_rainrate': {
+                    "long_name": "97.5th pct rain rate profile in a track",
+                    "units": "mm/hr",
+                },
                 'max_rainrate': {
                     "long_name": "Maximum rain rate profile in a track",
                     "units": "mm/hr",
+                },
+                'min_Dm': {
+                    "long_name": "Minimum mass weighted mean diameter profile in a track",
+                    "units": "mm",
+                },
+                'p02_Dm': {
+                    "long_name": "2.5th pct mass weighted mean diameter profile in a track",
+                    "units": "mm",
+                },
+                'p10_Dm': {
+                    "long_name": "10th pct mass weighted mean diameter profile in a track",
+                    "units": "mm",
+                },
+                'p25_Dm': {
+                    "long_name": "25th pct mass weighted mean diameter profile in a track",
+                    "units": "mm",
                 },
                 'p50_Dm': {
                     "long_name": "50th pct mass weighted mean diameter profile in a track",
@@ -538,9 +690,29 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "90th pct mass weighted mean diameter profile in a track",
                     "units": "mm",
                 },
+                'p98_Dm': {
+                    "long_name": "97.5th pct mass weighted mean diameter profile in a track",
+                    "units": "mm",
+                },
                 'max_Dm': {
                     "long_name": "Maximum mass weighted mean diameter profile in a track",
                     "units": "mm",
+                },
+                'min_rwc': {
+                    "long_name": "Minimum rain water content profile in a track",
+                    "units": "g/m^3",
+                },
+                'p02_rwc': {
+                    "long_name": "2.5th pct rain water content profile in a track",
+                    "units": "g/m^3",
+                },
+                'p10_rwc': {
+                    "long_name": "10th pct rain water content profile in a track",
+                    "units": "g/m^3",
+                },
+                'p25_rwc': {
+                    "long_name": "25th pct rain water content profile in a track",
+                    "units": "g/m^3",
                 },
                 'p50_rwc': {
                     "long_name": "50th pct rain water content profile in a track",
@@ -552,6 +724,10 @@ def calc_3d_cellstats_singlefile(
                 },
                 'p90_rwc': {
                     "long_name": "90th pct rain water content profile in a track",
+                    "units": "g/m^3",
+                },
+                'p98_rwc': {
+                    "long_name": "97.5th pct rain water content profile in a track",
                     "units": "g/m^3",
                 },
                 'max_rwc': {
