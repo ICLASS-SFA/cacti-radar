@@ -145,7 +145,7 @@ if __name__ == '__main__':
                     out_vars[ivar][:,itime] = _itimes_float64
                 else:
                     out_vars[ivar][:,itime] = dssonde[ivar].values[_index]
-                    out_vars[ivar][~valid,itime] = np.NaN
+                    out_vars[ivar][~valid,itime] = np.nan
 
     
     print(f'Writing output netCDF file ...')

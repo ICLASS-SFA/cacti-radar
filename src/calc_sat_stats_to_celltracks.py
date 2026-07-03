@@ -105,13 +105,13 @@ def calc_sat_cellstats_singlefile(
         # Convert convective cell mask to binary, then multiply by tracknumber
         # tracknumbermap_cmask = (cmask > 0) * tracknumbermap
         # Replace background values with NaN
-        # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
+        # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.nan
         cmask = ds['conv_mask'].squeeze()
         # tracknumbermap = ds['tracknumber'].squeeze()
         tracknumbermap = (cmask > 0) * ds['tracknumber'].squeeze()
         # tracknumbermap_cmask = ds['tracknumber'].squeeze().data # * ds['conv_mask'].squeeze().data
-        # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.NaN
-        tracknumbermap = tracknumbermap.where(tracknumbermap > 0, other=np.NaN)
+        # tracknumbermap_cmask[tracknumbermap_cmask <= 0] = np.nan
+        tracknumbermap = tracknumbermap.where(tracknumbermap > 0, other=np.nan)
         
         ds.close()
 

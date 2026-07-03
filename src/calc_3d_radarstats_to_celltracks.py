@@ -91,20 +91,19 @@ def calc_3d_cellstats_singlefile(
         height = dsv['z'].values
         
         # Start with all True (all data is valid)
-        mask = xr.full_like(dsv['taranis_dual_pol_data_mask'], True, dtype=bool)
-        mask = mask & (dsv['taranis_dual_pol_data_mask'] >= 1)
-        mask = mask & (dsv['taranis_attenuation_corrected_reflectivity'] <= 75)
-        mask = mask & (dsv['normalized_coherent_power'] >= 0.4)
-        mask = mask & (dsv['kdp_pos_lp_reg'] <= 12)
-        mask = mask & (dsv['classification_mask'] == 0)
-        mask = mask & (dsv['censor_mask'] == 0)
+        # mask = dsv['composite_mask'] == 1
+        # import pdb; pdb.set_trace()
+        mask = ( dsv['censor_mask'] == 0 ) \
+            & ( dsv['classification_mask'] == 0 ) \
+            & ( dsv['normalized_coherent_power'] >= 0.4 ) \
+            & ( dsv['taranis_dual_pol_data_mask'] == 1 )
 
         dbz = dsv['taranis_attenuation_corrected_reflectivity'].where(mask).squeeze()
         zdr = dsv['taranis_attenuation_corrected_differential_reflectivity'].where(mask).squeeze()
         kdp = dsv['kdp_pos_lp_reg'].where(mask).squeeze()
-        rainrate = dsv['taranis_rain_rate'].where(mask).where(dsv['taranis_rain_rate'] >= 0).squeeze()
-        Dm = dsv['taranis_Dm'].where(mask).where(dsv['taranis_Dm'] >= 0).squeeze()
-        rwc = dsv['rwc_combined'].where(mask).where(dsv['rwc_combined'] >= 0).squeeze()
+        rainrate = dsv['taranis_rain_rate'].where(mask).squeeze()
+        Dm = dsv['taranis_Dm'].where(mask).squeeze()
+        rwc = dsv['rwc_combined'].where(mask).squeeze()
         hid = dsv['hydrometeor_identification_post_grid'].where(mask).squeeze()
         rho = dsv['copol_correlation_coeff'].where(mask).squeeze()
         temp = dsv['sounding_temperature_post_grid'].isel(x=0).isel(y=0).squeeze()
@@ -120,7 +119,8 @@ def calc_3d_cellstats_singlefile(
         ds = ds.drop_vars(['x', 'y']).rename({'lat':'y', 'lon':'x'})
         # ds = ds.rename({'lat':'y', 'lon':'x'})
         # Read variables
-        cmask = ds['conv_mask'].squeeze()
+        # cmask = ds['conv_mask'].squeeze()
+        cmask = ds['conv_core'].squeeze()
         # core_mask = ds['conv_core'].squeeze()
         # tracknumbermap = ds['tracknumber'].squeeze()
         # Get cell tracknumber mask
@@ -128,7 +128,7 @@ def calc_3d_cellstats_singlefile(
         tracknumbermap = (cmask > 0) * ds['tracknumber'].squeeze()
         # tracknumbermap_cmask = core_mask * tracknumbermap
         # Replace background values with NaN
-        tracknumbermap = tracknumbermap.where(tracknumbermap > 0, other=np.NaN)
+        tracknumbermap = tracknumbermap.where(tracknumbermap > 0, other=np.nan)
         ds.close()
 
         # Create arrays for output statistics
@@ -204,7 +204,7 @@ def calc_3d_cellstats_singlefile(
         p98_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         max_rwc = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         volrain = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
-        mode_hid = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
+        # mode_hid = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         hid_01 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         hid_02 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
         hid_03 = np.full((nmatchcloud, zdim), np.nan, dtype=np.float32)
@@ -249,20 +249,11 @@ def calc_3d_cellstats_singlefile(
                     sub_zdr = zdr.where(tracknumbermap == itracknum, drop=True).values
                     sub_kdp = kdp.where(tracknumbermap == itracknum, drop=True).values
                     sub_rho = rho.where(tracknumbermap == itracknum, drop=True).values
+                    sub_rainrate = rainrate.where(tracknumbermap == itracknum, drop=True).values
+                    sub_Dm = Dm.where(tracknumbermap == itracknum, drop=True).values
+                    sub_rwc = rwc.where(tracknumbermap == itracknum, drop=True).values
+                    sub_hid = hid.where(tracknumbermap == itracknum, drop=True).values
 
-                    # Replace zero values with NaN
-                    sub_rainrate_raw = rainrate.where(tracknumbermap == itracknum, drop=True).values
-                    sub_rainrate = np.where(sub_rainrate_raw == 0, np.nan, sub_rainrate_raw)
-
-                    sub_Dm_raw = Dm.where(tracknumbermap == itracknum, drop=True).values
-                    sub_Dm = np.where(sub_Dm_raw == 0, np.nan, sub_Dm_raw)
-
-                    sub_rwc_raw = rwc.where(tracknumbermap == itracknum, drop=True).values
-                    sub_rwc = np.where(sub_rwc_raw == 0, np.nan, sub_rwc_raw)
-
-                    sub_hid_raw = hid.where(tracknumbermap == itracknum, drop=True).values
-                    sub_hid = np.where(sub_hid_raw == 0, np.nan, sub_hid_raw)
-                    
                     cell_area[imatchcloud] = inpix_cloud * pixel_radius**2
                     
                     # Calculate new statistics of the cloud
@@ -331,7 +322,7 @@ def calc_3d_cellstats_singlefile(
                         p90_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 90, axis=(1,2)).T
                         p98_rwc[imatchcloud,:] = np.nanpercentile(sub_rwc, 97.5, axis=(1,2)).T
                         max_rwc[imatchcloud,:] = np.nanmax(sub_rwc, axis=(1,2))
-                        mode_hid[imatchcloud,:],_ = mode(sub_hid,axis=(1,2),nan_policy='omit')
+                        # mode_hid[imatchcloud,:],_ = mode(sub_hid,axis=(1,2),nan_policy='omit')
                         hid_01[imatchcloud,:] = np.count_nonzero(sub_hid == 1, axis=(1,2))
                         hid_02[imatchcloud,:] = np.count_nonzero(sub_hid == 2, axis=(1,2))
                         hid_03[imatchcloud,:] = np.count_nonzero(sub_hid == 3, axis=(1,2))
@@ -437,7 +428,7 @@ def calc_3d_cellstats_singlefile(
                 "p98_rwc": p98_rwc,
                 "max_rwc": max_rwc,
                 "volrain": volrain,
-                "species": mode_hid,
+                # "species": mode_hid,
                 "drizzle": hid_01,
                 "rain": hid_02,
                 "ice_crystals": hid_03,
@@ -738,10 +729,10 @@ def calc_3d_cellstats_singlefile(
                     "long_name": "Volumetric rainfall profile in a track",
                     "units": "m^3/h^1",
                 },
-                'species': {
-                    "long_name": "Predominant hydrometeor class",
-                    "units": "Drizzle (1), Rain (2), Ice Crystals (3), Aggregates (4), Wet Snow (5), Vertical Ice (6), Low Density Graupel (7), High Density Graupel (8), Hail (9), Big Drops (10)",
-                },
+                # 'species': {
+                #     "long_name": "Predominant hydrometeor class",
+                #     "units": "Drizzle (1), Rain (2), Ice Crystals (3), Aggregates (4), Wet Snow (5), Vertical Ice (6), Low Density Graupel (7), High Density Graupel (8), Hail (9), Big Drops (10)",
+                # },
                 'drizzle': {
                     "long_name": "Number of pixels corresponding to drizzle in a cell",
                     "units": "counts",
@@ -847,7 +838,7 @@ if __name__ == '__main__':
 
     # Find matching satellite files for each pixel file
     match_ppifilelist = [''] * nfiles
-    match_ppibasetime = np.full(nfiles, np.NaN, dtype=np.float64)
+    match_ppibasetime = np.full(nfiles, np.nan, dtype=np.float64)
     for ifile in range(nfiles):
         # Find PPI time closest to the pixel file time and get the index
         # Save the filename if time difference is < time_window
